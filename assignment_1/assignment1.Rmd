@@ -7,6 +7,10 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+require(dplyr)
+require(tidyr)
+require(data.table)
+require(magrittr)
 ```
 
 # Assignment 1
@@ -36,6 +40,18 @@ then order the observations according to subject identifier and follow-up time.
 
 ```{r}
 # Enter code here.
+
+# reading datasets and setting primary keys
+longegfr1 = data.table(read.csv('./data/longegfr1.csv'), key=c('id', 'fu.years'))
+longegfr2 = data.table(read.csv('./data/longegfr2.csv'), key=c('ID', 'fu.years'))
+colnames(longegfr2) = c('id','fu.years','egfr') # change column names to make joining easier
+pk = c('id','fu.years')
+longegft = merge(longegfr1,
+                 longegfr2,
+                 by=pk,
+                 all=TRUE)[order(id,
+                                 fu.years)] # full outer join and sorting
+longegft
 ```
 
 
@@ -142,7 +158,7 @@ aligns between the two merged sets.
 * glucose = random blood glucose
 
 To link the two data files together, a third linker file linker.csv is provided. The linker
-file includes a LABID identifier and the cooresponding cohort id for each person in the cohort.
+file includes a LABID identifier and the corresponding cohort id for each person in the cohort.
 
 
 ### Problem 3.a (6 points)
