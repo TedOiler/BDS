@@ -1,6 +1,8 @@
 ---
 title: "Assignment 1"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -78,13 +80,14 @@ The plots should be appropriately labelled and the results should be accompanied
 ## Problem 2 (25 points)
 
 The MDRD4 and CKD-EPI equations are two different ways of estimating the glomerular filtration rate (eGFR) in adults:
-$$\text{MDRD4} = 175 × (\text{Scr})^{−1.154} × \text{Age}^{−0.203} [×0.742 \text{ if female}] [×1.212 \text{ if black}]$$,
+$MDRD4 = 175 \times Scr^{-1.154} \times Age^{-0.203} [\times 0.742 if female][\times 1.212 if black]$,
 and
-$$\text{CKD-EPI} = 141 × \min(\text{Scr}/\kappa, 1)^{\alpha} × \max(\text{Scr}/\kappa, 1)^{−1.209}× 0.993^{\text{Age}} [×1.018 \text{ if female}] [×1.159 \text{if black}]$$, (1)
+$CKD\_EPI = 141 \times \min{(Scr / \kappa , 1)^{\alpha}} \times \max{(Scr / \kappa,1)^{-1.209}} \times 0.993^{Age} [\times 1.018 ~~if~ female][\times 1.158 ~~if~ black]$, (1)
+
 where:
 * Scr is serum creatinine (in mg/dL)
-* \kappa is 0.7 for females and 0.9 for males
-* \alpha is -0.329 for females and -0.411 for males
+* $\kappa$ is 0.7 for females and 0.9 for males
+* $\alpha$ is -0.329 for females and -0.411 for males
 
 
 ### Problem 2.a (7 points)
