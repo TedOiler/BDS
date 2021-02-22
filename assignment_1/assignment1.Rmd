@@ -72,9 +72,10 @@ longegfr[,mean_egfr:=mean(egfr),
          by=id]
 longegfr[,count_egfr:=length(fu.years),
          by=id]
-
+longegfr[,fu_total:=max(fu.years)-min(fu.years),
+         by=id]
 summary(longegfr)
-
+longegfr
 longegfr$bag_egfr = cut(longegfr$mean_egfr, c(0,15,30,60,90,Inf))
 
 longegfr_nas = longegfr[,sum(is.na(mean_egfr)), by=id]
@@ -168,32 +169,6 @@ legend(x = "top",inset = 0,
 
 ```
 
-```{r}
-m <- matrix(c(1,2,3,4,5,5),nrow = 3,ncol = 2,byrow = TRUE)
-
-layout(mat = m,heights = c(0.4,0.4,0.2))
-
-par(mar = c(2,2,1,1))
-plot(subset_1[,fu.years], subset_1[,egfr], xlab='years', ylab='patient 1 egfr')
-abline(reg1, col='red4')
-abline(reg1_rob, col='blue4')
-plot(subset_2[,fu.years], subset_2[,egfr], xlab='years', ylab='patient 2 egfr')
-abline(reg2, col='red4')
-abline(reg2_rob, col='blue4')
-plot(subset_3[,fu.years], subset_3[,egfr], xlab='years', ylab='patient 3 egfr')
-abline(reg3, col='red4')
-abline(reg3_rob, col='blue4')
-plot(subset_4[,fu.years], subset_4[,egfr], xlab='years', ylab='patient 4 egfr')
-abline(reg4, col='red4')
-abline(reg4_rob, col='blue4')
-plot(1, type = "n", axes=FALSE, xlab="", ylab="")
-plot_colors <- c("blue","black", "green", "orange", "pink")
-legend(x = "top",inset = 0,
-        legend = c("Regression Line", "Robust Regression Line"), 
-        col=c('red4', 'blue4'), lwd=5, cex=.5, horiz = TRUE)
-```
-
-
 ## Problem 2 (25 points)
 
 The MDRD4 and CKD-EPI equations are two different ways of estimating the glomerular filtration rate (eGFR) in adults:
@@ -213,6 +188,14 @@ For the scr.csv dataset available on Learn, examine a summary of the distributio
 
 ```{r}
 # Enter code here.
+scr.dt = data.table(fread('./data/scr.csv'))
+plot(scr.dt[,scr])
+# longegfr_nas[,missing_ind:=ifelse(V1>0,1,0)]
+
+scr.dt[, scr:=ifelse(scr>19, scr/88.42, scr)]
+plot(scr.dt[,scr])
+IQR_scr = summary(scr.dt[,scr])[5] - summary(scr.dt[,scr])[2]
+IQR_scr
 ```
 
 ### Problem 2.b (11 points)
@@ -222,6 +205,34 @@ coefficient. Also report the same quantities according to strata of MDRD4 eGFR: 
 
 ```{r}
 # Enter code here.
+scr.dt[,scr_est1:=175*
+         scr^(-1.154)*
+         age^(-0.203)*
+         (fifelse(scr.dt[,sex=='Female'],0.742,1, na=1))*
+         (fifelse(scr.dt[,ethnic=='Black'],1.212,1,na=1))]
+
+scr.dt[,min_scr_1:=pmin(scr/fifelse(scr.dt[,sex=='Female'],0.7,0.9,na=1),1, na.rm=TRUE)^(fifelse(scr.dt[,sex=='Female'],-0.329,-0.411,na=1))]
+scr.dt[,max_scr_1:=pmax(scr/fifelse(scr.dt[,sex=='Female'],0.7,0.9,na=1),1, na.rm=TRUE)^(-1.209)]
+scr.dt[,scr_est2:=141*
+         min_scr_1*
+         max_scr_1*
+         0.993^age*
+         (fifelse(scr.dt[,sex=='Female'],1.018,1, na=1))*
+         (fifelse(scr.dt[,ethnic=='Black'],1.158,1,na=1))]
+
+scr.dt
+
+mean_est_1 = round(mean(scr.dt$scr_est1, na.rm=TRUE),2)
+sd_est_1   = round(sd  (scr.dt$scr_est1, na.rm=TRUE),2)
+mean_est_2 = round(mean(scr.dt$scr_est2, na.rm=TRUE),2)
+sd_est_2   = round(sd  (scr.dt$scr_est2, na.rm=TRUE),2)
+
+mean_est_1
+sd_est_1
+mean_est_2
+sd_est_2
+
+cor(scr.dt$scr_est1,scr.dt$scr_est2, method='pearson', use = "complete.obs")
 ```
 
 
@@ -233,6 +244,13 @@ equations linear? Justify your answer.
 
 ```{r}
 # Enter code here.
+plot(scr.dt$scr_est1,scr.dt$scr_est2, xlab='MDRD4', ylab='CKD-EPI', main='Linearity check between MDRD4 & CKD-EPI')
+abline(v=mean_est_1, col='blue4')
+abline(v=quantile(scr.dt$scr_est1, na.rm=TRUE)[2], col='blue4')
+abline(v=quantile(scr.dt$scr_est1, na.rm=TRUE)[4], col='blue4')
+abline(h=mean_est_2, col='red4')
+abline(h=quantile(scr.dt$scr_est2, na.rm=TRUE)[2], col='red4')
+abline(h=quantile(scr.dt$scr_est2, na.rm=TRUE)[4], col='red4')
 ```
 
 
