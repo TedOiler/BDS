@@ -11,6 +11,7 @@ require(dplyr)
 require(tidyr)
 require(data.table)
 require(magrittr)
+require(ggplot2)
 ```
 
 # Assignment 1
@@ -38,12 +39,12 @@ to the date when each eGFR measurement was taken, expressed in years).
 Convert the files to data tables (or tibble) and merge in an appropriate way into a single data table,
 then order the observations according to subject identifier and follow-up time. 
 
-```{r}
+```{r Not-used-helper}
 is.nan.data.frame <- function(x)
   do.call(cbind, lapply(x, is.nan))
 ```
 
-```{r}
+```{r table-joining}
 # Enter code here.
 
 # reading datasets and setting primary keys
@@ -54,7 +55,7 @@ pk = c('id','fu.years')
 longegfr = merge(longegfr1,
                  longegfr2,
                  by=pk,
-                 all=TRUE)[order(id,fu.years)] 
+                 all=TRUE)[order(id,fu.years)] # FULL OUTER JOIN
 longegfr %>% summary()
 ```
 
@@ -65,24 +66,21 @@ Compute the average eGFR and length of follow-up for each patient, then tabulate
 number of patients with average eGFR in the following ranges: (0, 15], (15, 30], (30, 60], (60,
 90], (90, max(eGFR)). Count and report the number of patients with missing average eGFR. 
 
-```{r}
+```{r column-creation-summaries}
 # Enter code here.
-# USdata.dt[, MeanMurder := mean(c(Murder.x,Murder.y)), by=State]
-
 longegfr[,mean_egfr:=mean(egfr),
          by=id]
 longegfr[,count_egfr:=length(fu.years),
          by=id]
 
 summary(longegfr)
-# diab.dt.imputed2$AGE.CAT <- cut(diab.dt.imputed2$AGE, c(0, 40, 60, Inf))
-# head(diab.dt.imputed2[, c("AGE", "AGE.CAT")])
 
 longegfr$bag_egfr = cut(longegfr$mean_egfr, c(0,15,30,60,90,Inf))
 
 longegfr_nas = longegfr[,sum(is.na(mean_egfr)), by=id]
 longegfr_nas[,missing_ind:=ifelse(V1>0,1,0)]
-longegfr_nas[,sum(missing_ind)]
+patients_egfr_na = longegfr_nas[,sum(missing_ind)]
+cat('There are', patients_egfr_na, 'patients with missing values for \'mean egfr\'')
 ```
 
 
@@ -91,8 +89,10 @@ longegfr_nas[,sum(missing_ind)]
 For patients with average eGFR in the (90,max(eGFR)) range, collect in a data table (or tibble) their identifier,
 sex, age at baseline, average eGFR, time of last eGFR reading and number of eGFR measurements taken. 
 
-```{r}
+```{r specific-group}
 # Enter code here.
+egfr_90_plus = unique(longegfr[mean_egfr>90, .(id,sex,baseline.age,mean_egfr, count_egfr),])[order(mean_egfr)]
+egfr_90_plus
 ```
 
 
@@ -105,11 +105,92 @@ For patients 3, 37, 162 and 223:
 * Using a different colour, plot a second regression line computed after removing the
 extreme eGFR values (one each of the highest and the lowest value). 
 
-The plots should be appropriately labelled and the results should be accompanied by some explanation as you would communicate it to a colleague with a medical rather than statistical background.
+The plots should be appropriately labeled and the results should be accompanied by some explanation as you would communicate it to a colleague with a medical rather than statistical background.
 
 ```{r}
 # Enter code here.
+patient_id = c(3,37,162,223)
+subset = longegfr[id %in% patient_id, .(id, fu.years, egfr)][order(id, fu.years)]
+subset_1 = subset[id==patient_id[1]]
+subset_2 = subset[id==patient_id[2]]
+subset_3 = subset[id==patient_id[3]]
+subset_4 = subset[id==patient_id[4]]
+subset_1_rob = subset_1[!(egfr==max(egfr, na.rm=TRUE) | egfr==min(egfr, na.rm=TRUE))]
+subset_2_rob = subset_2[!(egfr==max(egfr, na.rm=TRUE) | egfr==min(egfr, na.rm=TRUE))]
+subset_3_rob = subset_3[!(egfr==max(egfr, na.rm=TRUE) | egfr==min(egfr, na.rm=TRUE))]
+subset_4_rob = subset_4[!(egfr==max(egfr, na.rm=TRUE) | egfr==min(egfr, na.rm=TRUE))]
 
+reg1 = lm(subset_1[,egfr] ~ subset_1[,fu.years])
+reg2 = lm(subset_2[,egfr] ~ subset_2[,fu.years])
+reg3 = lm(subset_3[,egfr] ~ subset_3[,fu.years])
+reg4 = lm(subset_4[,egfr] ~ subset_4[,fu.years])
+reg1_rob = lm(subset_1_rob[,egfr] ~ subset_1_rob[,fu.years])
+reg2_rob = lm(subset_2_rob[,egfr] ~ subset_2_rob[,fu.years])
+reg3_rob = lm(subset_3_rob[,egfr] ~ subset_3_rob[,fu.years])
+reg4_rob = lm(subset_4_rob[,egfr] ~ subset_4_rob[,fu.years])
+
+coef_1 = summary(reg1, conf.int=TRUE)$coefficients[2,1]
+sd_1   = summary(reg1, conf.int=TRUE)$coefficients[2,2]
+coef_2 = summary(reg2, conf.int=TRUE)$coefficients[2,1]
+sd_2   = summary(reg2, conf.int=TRUE)$coefficients[2,2]
+coef_3 = summary(reg3, conf.int=TRUE)$coefficients[2,1]
+sd_3   = summary(reg3, conf.int=TRUE)$coefficients[2,2]
+coef_4 = summary(reg4, conf.int=TRUE)$coefficients[2,1]
+sd_4   = summary(reg4, conf.int=TRUE)$coefficients[2,2]
+
+ci_1 = c(coef_1 - 2*sd_1 , coef_1 + 2*sd_1)
+ci_2 = c(coef_2 - 2*sd_2 , coef_2 + 2*sd_2)
+ci_3 = c(coef_3 - 2*sd_3 , coef_3 + 2*sd_3)
+ci_4 = c(coef_4 - 2*sd_4 , coef_4 + 2*sd_4)
+
+m <- matrix(c(1,2,3,4,5,5),nrow = 3,ncol = 2,byrow = TRUE)
+
+layout(mat = m,heights = c(0.4,0.4,0.2))
+
+par(mar = c(2,2,1,1))
+plot(subset_1[,fu.years], subset_1[,egfr], xlab='years', ylab='patient 1 egfr')
+abline(reg1, col='red4')
+abline(reg1_rob, col='blue4')
+plot(subset_2[,fu.years], subset_2[,egfr], xlab='years', ylab='patient 2 egfr')
+abline(reg2, col='red4')
+abline(reg2_rob, col='blue4')
+plot(subset_3[,fu.years], subset_3[,egfr], xlab='years', ylab='patient 3 egfr')
+abline(reg3, col='red4')
+abline(reg3_rob, col='blue4')
+plot(subset_4[,fu.years], subset_4[,egfr], xlab='years', ylab='patient 4 egfr')
+abline(reg4, col='red4')
+abline(reg4_rob, col='blue4')
+plot(1, type = "n", axes=FALSE, xlab="", ylab="")
+plot_colors <- c("blue","black", "green", "orange", "pink")
+legend(x = "top",inset = 0,
+        legend = c("Regression Line", "Robust Regression Line"), 
+        col=c('red4', 'blue4'), lwd=3, cex=1.5, horiz = TRUE)
+
+```
+
+```{r}
+m <- matrix(c(1,2,3,4,5,5),nrow = 3,ncol = 2,byrow = TRUE)
+
+layout(mat = m,heights = c(0.4,0.4,0.2))
+
+par(mar = c(2,2,1,1))
+plot(subset_1[,fu.years], subset_1[,egfr], xlab='years', ylab='patient 1 egfr')
+abline(reg1, col='red4')
+abline(reg1_rob, col='blue4')
+plot(subset_2[,fu.years], subset_2[,egfr], xlab='years', ylab='patient 2 egfr')
+abline(reg2, col='red4')
+abline(reg2_rob, col='blue4')
+plot(subset_3[,fu.years], subset_3[,egfr], xlab='years', ylab='patient 3 egfr')
+abline(reg3, col='red4')
+abline(reg3_rob, col='blue4')
+plot(subset_4[,fu.years], subset_4[,egfr], xlab='years', ylab='patient 4 egfr')
+abline(reg4, col='red4')
+abline(reg4_rob, col='blue4')
+plot(1, type = "n", axes=FALSE, xlab="", ylab="")
+plot_colors <- c("blue","black", "green", "orange", "pink")
+legend(x = "top",inset = 0,
+        legend = c("Regression Line", "Robust Regression Line"), 
+        col=c('red4', 'blue4'), lwd=5, cex=.5, horiz = TRUE)
 ```
 
 
