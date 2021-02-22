@@ -292,6 +292,16 @@ Ensure that the albumin field is converted to a factor and the ordering of the f
 
 ```{r}
 # Enter code here.
+cohort = data.table(fread('./data/cohort.csv', stringsAsFactors = TRUE))
+lab1 = data.table(fread('./data/lab1.csv'))
+linker = data.table(fread('./data/linker.csv'))
+
+cohort
+
+
+tmp = merge(cohort, linker, by=c('id'), all=TRUE)
+cohort.dt = merge(tmp, lab1, by.x=c('LABID', 'yob'), by.y=c('LABID', 'yob'), all=TRUE)
+cohort.dt
 ```
 
 
