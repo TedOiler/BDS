@@ -39,19 +39,23 @@ Convert the files to data tables (or tibble) and merge in an appropriate way int
 then order the observations according to subject identifier and follow-up time. 
 
 ```{r}
+is.nan.data.frame <- function(x)
+  do.call(cbind, lapply(x, is.nan))
+```
+
+```{r}
 # Enter code here.
 
 # reading datasets and setting primary keys
-longegfr1 = data.table(read.csv('./data/longegfr1.csv'), key=c('id', 'fu.years'))
-longegfr2 = data.table(read.csv('./data/longegfr2.csv'), key=c('ID', 'fu.years'))
+longegfr1 = data.table(fread('./data/longegfr1.csv'), key=c('id', 'fu.years'))
+longegfr2 = data.table(fread('./data/longegfr2.csv'), key=c('ID', 'fu.years'))
 colnames(longegfr2) = c('id','fu.years','egfr') # change column names to make joining easier
 pk = c('id','fu.years')
-longegft = merge(longegfr1,
+longegfr = merge(longegfr1,
                  longegfr2,
                  by=pk,
-                 all=TRUE)[order(id,
-                                 fu.years)] # full outer join and sorting
-longegft
+                 all=TRUE)[order(id,fu.years)] 
+longegfr %>% summary()
 ```
 
 
@@ -63,6 +67,22 @@ number of patients with average eGFR in the following ranges: (0, 15], (15, 30],
 
 ```{r}
 # Enter code here.
+# USdata.dt[, MeanMurder := mean(c(Murder.x,Murder.y)), by=State]
+
+longegfr[,mean_egfr:=mean(egfr),
+         by=id]
+longegfr[,count_egfr:=length(fu.years),
+         by=id]
+
+summary(longegfr)
+# diab.dt.imputed2$AGE.CAT <- cut(diab.dt.imputed2$AGE, c(0, 40, 60, Inf))
+# head(diab.dt.imputed2[, c("AGE", "AGE.CAT")])
+
+longegfr$bag_egfr = cut(longegfr$mean_egfr, c(0,15,30,60,90,Inf))
+
+longegfr_nas = longegfr[,sum(is.na(mean_egfr)), by=id]
+longegfr_nas[,missing_ind:=ifelse(V1>0,1,0)]
+longegfr_nas[,sum(missing_ind)]
 ```
 
 
