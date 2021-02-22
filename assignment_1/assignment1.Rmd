@@ -296,9 +296,6 @@ cohort = data.table(fread('./data/cohort.csv', stringsAsFactors = TRUE))
 lab1 = data.table(fread('./data/lab1.csv'))
 linker = data.table(fread('./data/linker.csv'))
 
-cohort
-
-
 tmp = merge(cohort, linker, by=c('id'), all=TRUE)
 cohort.dt = merge(tmp, lab1, by.x=c('LABID', 'yob'), by.y=c('LABID', 'yob'), all=TRUE)
 cohort.dt
@@ -311,10 +308,31 @@ Create a copy of the dataset where you will impute all missing values.
 Update any missing age fields using the year of birth, for all other continuous variables write a function called impute.to.mean and impute to mean, impute any categorical variable to the mode.
 Compare the distributions of the imputed and non-imputed variables and decide which ones to keep for further analysis. Justify your answer. 
 
-```{r}
+```{r Join Datasets}
 # Enter code here.
+cohort_complete = copy(cohort.dt)
+cohort_complete[is.na(age), age:=abs(year(Sys.Date())-round(yob))]
+cohort_complete
+```
+```{r Single imputation function}
+#' This is a function that takes as impute a column of a data.table and imputes 
+#' the NAs with its mean / mode if tha vector is numeric or categorical respectively.
+#' @param x A vector of numeric or categorical values for which the NAs will be imputed.
+impute.to.mean <- function(x) {
+    if (is.double(x)){x[is.na(x)] <- mean(x, na.rm=TRUE)} else {x[is.na(x)] <- mode(x)}
+    return(x)
+  }
 ```
 
+```{r Impute missing values}
+# diab.dt.imputed2 <- diab.dt %>% copy() %>% 
+#                         .[, (numcols) := lapply(.SD, impute.to.median),.SDcols = numcols]
+
+numcols <- cohort.dt %>% select(bp) %>% colnames
+cohort.dt %>% .[, (numcols) := lapply(.SD, impute.to.mean),.SDcols = numcols]
+
+(cohort.dt)
+```
 
 ### Problem 3.c (6 points)
 
@@ -322,7 +340,6 @@ Plot boxplots of potential predictors for diabetes grouped by cases and controls
 
 ```{r}
 # Enter code here.
-
 ```
 
 
