@@ -12,6 +12,7 @@ require(tidyr)
 require(data.table)
 require(magrittr)
 require(ggplot2)
+rm(list=ls())
 ```
 
 # Assignment 1
@@ -295,9 +296,10 @@ Ensure that the albumin field is converted to a factor and the ordering of the f
 cohort = data.table(fread('./data/cohort.csv', stringsAsFactors = TRUE))
 lab1 = data.table(fread('./data/lab1.csv'))
 linker = data.table(fread('./data/linker.csv'))
-
 tmp = merge(cohort, linker, by=c('id'), all=TRUE)
 cohort.dt = merge(tmp, lab1, by.x=c('LABID', 'yob'), by.y=c('LABID', 'yob'), all=TRUE)
+cohort.dt$albumin = ordered(cohort.dt$albumin,
+                            levels = c('normo','micro','macro'))
 cohort.dt
 ```
 
@@ -319,13 +321,17 @@ cohort_complete
 #' the NAs with its mean / mode if tha vector is numeric or categorical respectively.
 #' @param x A vector of numeric or categorical values for which the NAs will be imputed.
 impute.to.mean <- function(x) {
-    if (is.numeric(x) || is.integer(x)){
+    if (is.double(x)){
       x[is.na(x)] <- mean(x, na.rm=TRUE)
-    } else if(is.factor(x)) {
-      x[is.na(x)] <- aggregate(value~factor, FUN=mean)
-    }else {
-      x[is.na(x)] <- mode(x)
-      }
+    } else if (is.factor(x)){
+      uniquex = unique(x)
+      x[is.na(x)] <- uniquex[which.max(tabulate(match(x,uniquex)))]
+    } else {
+      uniquex = unique(x)
+#      x[is.na(x)] <- which.max(unique(x), na.rm=TRUE)
+      x[is.na(x)] <- uniquex[which.max(tabulate(match(x,uniquex)))]
+
+    }
     return(x)
   }
 ```
@@ -333,10 +339,14 @@ impute.to.mean <- function(x) {
 ```{r Impute missing values}
 # diab.dt.imputed2 <- diab.dt %>% copy() %>% 
 #                         .[, (numcols) := lapply(.SD, impute.to.median),.SDcols = numcols]
-numcols <- cohort_complete %>% select(bp,diabetes,urea,creatinine,glucose) %>% colnames
+# bp,diabetes,urea,creatinine,glucose, albumin
+numcols <- cohort_complete %>% select(bp,diabetes,urea,creatinine,glucose, albumin) %>% colnames
 cohort_complete %>% .[, (numcols) := lapply(.SD, impute.to.mean), .SDcols = numcols]
 
+unique(cohort.dt$glucose)
+
 summary(cohort_complete)
+cohort_complete
 
 m <- matrix(c(1,2,3,4,5,6,7,7,7),nrow = 3,ncol = 3,byrow = TRUE)
 layout(mat = m,heights = c(0.4,0.4,0.2))
@@ -349,12 +359,11 @@ plot(density(cohort.dt$urea, na.rm=TRUE), col='blue4', main='KDE of urea')
 lines(density(cohort_complete$urea), col='red4')
 plot(density(cohort.dt$creatinine, na.rm=TRUE), col='blue4', main='KDE of creatinine')
 lines(density(cohort_complete$creatinine), col='red4')
+plot(density(as.numeric(factor(cohort_complete$albumin)), na.rm=TRUE), col='blue4', main='KDE of albumin')
+lines(density(as.numeric(factor(cohort_complete$albumin))), col='red4')
+legend('topright', legend=c('1: normo','2: micro','3: macro'))
 plot(density(cohort.dt$glucose, na.rm=TRUE), col='blue4', main='KDE of glucose')
 lines(density(cohort_complete$glucose), col='red4')
-
-plot(density(cohort.dt$glucose, na.rm=TRUE), col='blue4', main='KDE of glucose')
-lines(density(cohort_complete$glucose), col='red4')
-
 plot(1, type = "n", axes=FALSE, xlab="", ylab="")
 legend(x = "top",inset = 0,
         legend = c("Imputed", "Original Dataset"), 
@@ -367,6 +376,25 @@ Plot boxplots of potential predictors for diabetes grouped by cases and controls
 
 ```{r}
 # Enter code here.
+# bp,diabetes,urea,creatinine,glucose, albumin
+bp = cohort_complete$bp
+urea = cohort_complete$urea
+creatinine = cohort_complete$creatinine
+glucose = cohort.dt$glucose
+albumin = cohort_complete$albumin
+diabetes = cohort_complete$diabetes
+
+m <- matrix(c(1,2,3,4),nrow = 2,ncol = 2,byrow = TRUE)
+layout(mat = m,heights = c(0.4,0.4,0.2))
+par(mar = c(2,2,1,1))
+boxplot(bp ~ diabetes, data=cohort_complete, main="Blood Pressuer stratified by Diabetes")
+boxplot(urea ~ diabetes, data=cohort_complete, main="Urea stratified by Diabetes")
+boxplot(creatinine ~ diabetes, data=cohort_complete, main="Creatine stratified by Diabetes")
+boxplot(glucose ~ diabetes, data=cohort_complete, main="Glucose stratified by Diabetes")
+
+albumin_table = table(albumin, diabetes)
+colnames(albumin_table) = c("No Diabetes", "Diabetes")
+albumin_table
 ```
 
 
@@ -376,6 +404,7 @@ Use your findings from the previous exercise fit an appropriate model of diabete
 
 ```{r}
 # Enter code here.
+model1 = glm(diabetes ~ glucose + )
 ```
 
 
