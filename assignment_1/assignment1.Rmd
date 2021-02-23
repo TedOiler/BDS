@@ -1,5 +1,8 @@
 ---
 title: "Assignment 1"
+author: 'Ted Ladas - s2124289'
+date: '25-Feb-2021'
+supervisor: 'Dr. Thanasis Tsanas'
 output:
   pdf_document: default
   html_document: default
@@ -27,6 +30,7 @@ Clear and reusable code will be rewarded so pay attention to indentation, choice
 An initial code chunk is provided after each subquestion but create as many chunks as you feel is necessary to make a clear report. Add plain text explanations in between the chunks as and when required and any comments necessary within code chunks to make it easier to follow your code/reasoning.
 
 
+\newpage
 
 ## Problem 1 (25 points)
 
@@ -152,16 +156,16 @@ m = matrix(c(1,2,3,4,5,5),nrow = 3,ncol = 2,byrow = TRUE)
 layout(mat = m,heights = c(0.4,0.4,0.2))
 
 par(mar = c(2,2,1,1))
-plot(subset_1[,fu.years], subset_1[,egfr], xlab='years', ylab='patient 1 egfr')
+plot(subset_1[,fu.years], subset_1[,egfr], xlab='years', ylab='egfr', main='patient ID:3')
 abline(reg1, col='red4')
 abline(reg1_rob, col='blue4')
-plot(subset_2[,fu.years], subset_2[,egfr], xlab='years', ylab='patient 2 egfr')
+plot(subset_2[,fu.years], subset_2[,egfr], xlab='years', ylab='egfr', main='patient ID:37')
 abline(reg2, col='red4')
 abline(reg2_rob, col='blue4')
-plot(subset_3[,fu.years], subset_3[,egfr], xlab='years', ylab='patient 3 egfr')
+plot(subset_3[,fu.years], subset_3[,egfr], xlab='years', ylab='egfr', main='patient ID:162')
 abline(reg3, col='red4')
 abline(reg3_rob, col='blue4')
-plot(subset_4[,fu.years], subset_4[,egfr], xlab='years', ylab='patient 4 egfr')
+plot(subset_4[,fu.years], subset_4[,egfr], xlab='years', ylab='egfr', main='patient ID:223')
 abline(reg4, col='red4')
 abline(reg4_rob, col='blue4')
 plot(1, type = "n", axes=FALSE, xlab="", ylab="")
@@ -170,7 +174,23 @@ legend(x = "top",inset = 0,
         legend = c("Regression Line", "Robust Regression Line"), 
         col=c('red4', 'blue4'), lwd=3, cex=1.5, horiz = TRUE)
 
+cat('\npatient 3  , 95% confidence interval for slope:', round(ci_1,2))
+cat('\npatient 37 , 95% confidence interval for slope:', round(ci_2,2))
+cat('\npatient 162, 95% confidence interval for slope:', round(ci_3,2))
+cat('\npatient 223, 95% confidence interval for slope:', round(ci_4,2))
 ```
+
+**Write up:** On the four diagrams, we can see the measurements of eGFR for patients with IDs, 3, 36 and 223 as a function of time. Also, we have estimated a linear relationship of those measurements plotted in Red colour. We can clearly see that for patients, 162 and 223, their eGFR index tends to fall over time. Our analysis goes a step further and also estimated a second line, the blue one, where we have excluded from each patients measurements their highest and lowest values. This allows us to understand a very important piece of information, that is, how sensitive our estimated linear line is to outliers For example, we can see on the bottom two diagrams that the relationship of eGFR as a function of time changes slightly when the outliers are removed, which means that we have confidence on our estimation. However, for patient 3, we can see a big change in the slope of the line. The red line indicates an increase of eGFR over time, while the blue one hints that the relationship might not be as dramatic as we think. Most interestingly, for patient 7, the relationship seems to change sign and from slightly postie be slightly negative. Those results indicate that we might need more observations for these patients to draw a safer conclusion. 
+
+
+patient 3  , 95% confidence interval for slope: -2.52 11.62
+patient 37 , 95% confidence interval for slope: -3.29 2.07
+patient 162, 95% confidence interval for slope: -9.11 -2.02
+patient 223, 95% confidence interval for slope: -67.49 27.52
+
+We have also calculated the 95% confidence intervals for the slope of the lines, which are presented above. This information is extremely important because it allows us to understand not only the slope of the curve, but also it's variability or 'how sure are we that the slope is what it is'. For example, we suspected from the diagrams that for patient 3 the slope could be zero, or non changing in time overall. This is confirmed from the 95% confidence intervals. Notice that in both cases, they include 0 in them. This means that in a significance level of 95% we **cannot** exclude zero as a possibility for the slope. In contrast, for patient 162, we are very confident in saying that the slope is negative over time. Lastly, a very interesting case is the case of patient 223. While from the diagram we can clearly see a negative linear relationship, our confidence interval suggests otherwise. This extreme big variance in the estimate for slope mainly comes from the fact that patient 223 has too few samples to base our analysis on. We need more measurements in order to be able to judge their situation better. 
+
+\newpage
 
 ## Problem 2 (25 points)
 
@@ -187,19 +207,22 @@ where:
 
 ### Problem 2.a (7 points)
 
-For the scr.csv dataset available on Learn, examine a summary of the distribution of serum creatinine and report the inter-quartile range. If you suspect that some serum creatinine values may have been reported in µmol/L convert them to mg/dL by dividing by 88.42. Justify your choice of values to convert and examine the distribution of serum creatinine following any changes you have made.
+For the scr.csv dataset available on Learn, examine a summary of the distribution of serum creatinine and report the inter-quartile range. If you suspect that some serum creatinine values may have been reported in micro-mol/L convert them to mg/dL by dividing by 88.42. Justify your choice of values to convert and examine the distribution of serum creatinine following any changes you have made.
 
 ```{r}
 # Enter code here.
 scr.dt = data.table(fread('./data/scr.csv'))
 plot(scr.dt[,scr])
-# longegfr_nas[,missing_ind:=ifelse(V1>0,1,0)]
 
 scr.dt[, scr:=ifelse(scr>19, scr/88.42, scr)]
 plot(scr.dt[,scr])
 IQR_scr = summary(scr.dt[,scr])[5] - summary(scr.dt[,scr])[2]
 IQR_scr
 ```
+
+**Write up:** We suspected that some of the measurements of serum creatinine might have been reported in the wrong units of measurements. This is clearly beeing shown in the plot above. We selected a cut off line on `scr=19`, so all measurements above that line where converted to micro-mol/L be dividing the observations with `88.42`. 
+We are reporting the Inter Quantile range of the variable is reported and it is shown above.
+
 
 ### Problem 2.b (11 points)
 
@@ -222,21 +245,22 @@ scr.dt[,scr_est2:=141*
          0.993^age*
          (fifelse(scr.dt[,sex=='Female'],1.018,1, na=1))*
          (fifelse(scr.dt[,ethnic=='Black'],1.158,1,na=1))]
-
-scr.dt
-
 mean_est_1 = round(mean(scr.dt$scr_est1, na.rm=TRUE),2)
 sd_est_1   = round(sd  (scr.dt$scr_est1, na.rm=TRUE),2)
 mean_est_2 = round(mean(scr.dt$scr_est2, na.rm=TRUE),2)
 sd_est_2   = round(sd  (scr.dt$scr_est2, na.rm=TRUE),2)
 
-mean_est_1
-sd_est_1
-mean_est_2
-sd_est_2
+cat('\nMean of eGFR according to MDRD4',mean_est_1)
+cat('\nStandard deviations of eGFR according to MDRD4',sd_est_1)
+cat('\nMean of eGFR according to CKD-EPI',mean_est_2)
+cat('\nStandard deviations of eGFR according to CKD-EPI',sd_est_2)
 
-cor(scr.dt$scr_est1,scr.dt$scr_est2, method='pearson', use = "complete.obs")
+cat('\nLinear correlation of the two estimates of eGFR',cor(scr.dt$scr_est1,scr.dt$scr_est2, method='pearson', use = "complete.obs"))
 ```
+Report (rounded to the second decimal place) mean and standard deviation of the two eGFR vectors and their Pearson correlation
+coefficient. Also report the same quantities according to strata of MDRD4 eGFR: 0-60, 60-90 and > 90. 
+
+**Write up:** We can clearly see from the output of the code above, that the two estimates are very similar in their mean and deviation. The linear correlation estimate of 95.3% is also a very good indicator of that. 
 
 
 ### Problem 2.c (7 points)
@@ -248,14 +272,17 @@ equations linear? Justify your answer.
 ```{r}
 # Enter code here.
 plot(scr.dt$scr_est1,scr.dt$scr_est2, xlab='MDRD4', ylab='CKD-EPI', main='Linearity check between MDRD4 & CKD-EPI')
-abline(v=mean_est_1, col='blue4')
+abline(v=median(scr.dt$scr_est1, na.rm=TRUE), col='blue4')
 abline(v=quantile(scr.dt$scr_est1, na.rm=TRUE)[2], col='blue4')
 abline(v=quantile(scr.dt$scr_est1, na.rm=TRUE)[4], col='blue4')
-abline(h=mean_est_2, col='red4')
+abline(h=median(scr.dt$scr_est1, na.rm=TRUE), col='red4')
 abline(h=quantile(scr.dt$scr_est2, na.rm=TRUE)[2], col='red4')
 abline(h=quantile(scr.dt$scr_est2, na.rm=TRUE)[4], col='red4')
 ```
 
+The above diagram supports the claim of the Pearson Correlation index we produced above. We can see that the relation of the two variables is linear in the range from zero, up to the third quantile. We can also observe that for high values (above Q3) there results of the estimates are not the same. There more input is needed  to understand which of the two estimates are more accurate in predicting the high values of eGFR correctly. For values below 100 though, the results from using MDRD4 as the predictor or CKD-EPI are almost indistinguishable. 
+
+\newpage
 
 ## Problem 3 (31 points)
 
@@ -320,7 +347,7 @@ cohort_complete
 ```
 ```{r Single imputation function}
 #' This is a function that takes as impute a column of a data.table and imputes 
-#' the NAs with its mean / mode if tha vector is numeric or categorical respectively.
+#' the NAs with its mean / mode if the vector is numeric or categorical respectively.
 #' @param x A vector of numeric or categorical values for which the NAs will be imputed.
 impute.to.mean = function(x) {
     if (is.numeric(x)){
@@ -332,17 +359,9 @@ impute.to.mean = function(x) {
   }
 ```
 
-```{r Impute missing values}
-# diab.dt.imputed2 = diab.dt %>% copy() %>% 
-#                         .[, (numcols) := lapply(.SD, impute.to.median),.SDcols = numcols]
-# bp,diabetes,urea,creatinine,glucose, albumin
+```{r Impute missing values, warning=FALSE}
 numcols = cohort_complete %>% select(bp,diabetes,urea,creatinine,glucose, albumin) %>% colnames
 cohort_complete %>% .[, (numcols) := lapply(.SD, impute.to.mean), .SDcols = numcols]
-unique(cohort.dt$bp)[which.max(tabulate(match(cohort.dt$bp, unique(cohort.dt$bp))))]
-
-summary(cohort_complete)
-cohort_complete
-
 m = matrix(c(1,2,3,4,5,6,7,7,7),nrow = 3,ncol = 3,byrow = TRUE)
 layout(mat = m,heights = c(0.4,0.4,0.2))
 par(mar = c(2,2,1,1))
@@ -360,6 +379,7 @@ legend(x = "top",inset = 0,
         legend = c("Imputed", "Original"), 
         col=c('red4', 'blue4'), lwd=3, cex=1.5, horiz = TRUE)
 ```
+The diagrams above show the distribution of our variables with (red) and without (blue) the imputation step. This step is important because we need to understand whether we introduced some kind of bias to the dataset when imputing the values. The bias would be visible if the red lines / bars where vastly different from the blue ones. For example, if we focus on the Urea diagram, we can clearly see that the distribution after the imputation of the missing values follows very closely the original distribution. If wee shift our attention to the Glucose variable we can see that our imputation while still doing a reasonable imputation, the red line doesn't follow the blue one that closely. A very important variable, the variable of Diabetes, is our primary focus though, since this is our target variable (the one we are trying to estimate), and we wouldn't want to skew our data in anyway. We can clearly see from the diagram that the distributions before an after the imputation are almost identical.  
 
 ### Problem 3.c (6 points)
 
@@ -367,7 +387,6 @@ Plot boxplots of potential predictors for diabetes grouped by cases and controls
 
 ```{r warning=FALSE}
 # Enter code here.
-# bp,diabetes,urea,creatinine,glucose, albumin
 bp = cohort_complete$bp
 urea = cohort_complete$urea
 creatinine = cohort_complete$creatinine
@@ -375,19 +394,22 @@ glucose = cohort_complete$glucose
 albumin = cohort_complete$albumin
 diabetes = cohort_complete$diabetes
 
-m = matrix(c(1,2,3,4,5,3),nrow = 2,ncol = 3,byrow = TRUE)
+m = matrix(c(1,2,3,4,5,6),nrow = 2,ncol = 3,byrow = TRUE)
 layout(mat = m,heights = c(0.4,0.4,0.2))
 par(mar = c(2,2,1,1))
 boxplot(bp ~ diabetes, data=cohort_complete, main="Blood press stratified by Diabetes")
 boxplot(urea ~ diabetes, data=cohort_complete, main="Urea stratified by Diabetes")
-barplot(rbind(table(cohort_complete$diabetes), table(cohort.dt$albumin)), beside=TRUE, col=c('red4','blue4'), main='Algomin stratified by Diabetes')
-boxplot(creatinine ~ diabetes, data=cohort_complete, main="Creatine stratified by Diabetes")
+boxplot(age ~ diabetes, data=cohort_complete, main="Age stratified by Diabetes")
+barplot(rbind(table(cohort_complete$diabetes), table(cohort_complete$albumin)), beside=TRUE, col=c('red4','blue4'), main='Algomin stratified by Diabetes')
+boxplot(creatinine ~ diabetes, data=cohort_complete, main="Creatine stratified by Diabetes", ylim=c(0,1500))
 boxplot(glucose ~ diabetes, data=cohort_complete, main="Glucose stratified by Diabetes")
 
 albumin_table = table(albumin, diabetes)
 colnames(albumin_table) = c("No Diabetes", "Diabetes")
 albumin_table
 ```
+
+The above boxplots are plotted in order to help us decide which variables can potentially be important in building a model to predict and understand diabetes. We have stratified each variable by the diabetes levels (0: No diabetes present in subject, 1: Diabetes present in subject) and we are essentially looking to see what variables have the most different distributions between the strata. What we take from this diagram is that the Glucose variable plays a key role in predicting diabetes, which is what the literature sujest and we know to date. Secondly, we see that the Algomin variable plays a very important role, when it is in 'macro' levels, so this could also be a good predictor. With that in mind, we will quantify the relation be fitting and comparing many different models. 
 
 
 ### Problem 3.d (9 points)
@@ -399,7 +421,13 @@ Use your findings from the previous exercise fit an appropriate model of diabete
 model1 = glm(diabetes ~ glucose + albumin, family='binomial')
 summary(model1)
 ```
+The above results comes from a very simple linear model that uses  the variables glucose and albumin to predict diabetes in a patient. The output of the model is a number from zero to one, which we can convert to binary (0 or 1) on some threshold. The most important numbers are the ones on the coefficient section. These numbers are the coefficient of each variable and our model can be summarized as: 
 
+$\text{diabetes} = -3.151 +  0.018 \times \text{glucose} + 0.535 [\text{if albumin is normo}] -0.448[\text{if albumin is micro}]$
+
+The second most important thing to investigate is the star values next to the coefficients. Those signal the confidence that our data allows us to have on those coefficients. If the confidence is low (no stars), that means that, from the specific dataset, we **cannot** safely assume that this output is different than zero. So for example, we have much confidence in the coefficient of glucose to be different than zero, but we cannot say the same for albumin which doesn't have significance. 
+
+\newpage
 
 ## Problem 4 (19 points)
 
@@ -411,9 +439,13 @@ Add a third predictor to the final model from problem 3, perform a likelihood ra
 # Enter code here.
 model2 = glm(diabetes ~ glucose + albumin + cohort_complete$age, family='binomial')
 summary(model2)
+```
+```{r}
 pval = pchisq(model1$deviance - model2$deviance, df=1, lower.tail=FALSE)
 signif(pval, 2)
+```
 
+```{r}
 roc1 = roc(cohort_complete$diabetes, model1$fitted.values , plot=TRUE, xlim = c(0,1))
 roc2 = roc(cohort_complete$diabetes, model2$fitted.values , plot=TRUE, xlim = c(0,1), add=TRUE, col="red4")
 roc1$auc
