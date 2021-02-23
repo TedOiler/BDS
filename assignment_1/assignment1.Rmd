@@ -12,6 +12,8 @@ require(tidyr)
 require(data.table)
 require(magrittr)
 require(ggplot2)
+library(pROC)
+library(caret)
 rm(list=ls())
 ```
 
@@ -41,7 +43,7 @@ Convert the files to data tables (or tibble) and merge in an appropriate way int
 then order the observations according to subject identifier and follow-up time. 
 
 ```{r Not-used-helper}
-is.nan.data.frame <- function(x)
+is.nan.data.frame = function(x)
   do.call(cbind, lapply(x, is.nan))
 ```
 
@@ -145,7 +147,7 @@ ci_2 = c(coef_2 - 2*sd_2 , coef_2 + 2*sd_2)
 ci_3 = c(coef_3 - 2*sd_3 , coef_3 + 2*sd_3)
 ci_4 = c(coef_4 - 2*sd_4 , coef_4 + 2*sd_4)
 
-m <- matrix(c(1,2,3,4,5,5),nrow = 3,ncol = 2,byrow = TRUE)
+m = matrix(c(1,2,3,4,5,5),nrow = 3,ncol = 2,byrow = TRUE)
 
 layout(mat = m,heights = c(0.4,0.4,0.2))
 
@@ -163,7 +165,7 @@ plot(subset_4[,fu.years], subset_4[,egfr], xlab='years', ylab='patient 4 egfr')
 abline(reg4, col='red4')
 abline(reg4_rob, col='blue4')
 plot(1, type = "n", axes=FALSE, xlab="", ylab="")
-plot_colors <- c("blue","black", "green", "orange", "pink")
+plot_colors = c("blue","black", "green", "orange", "pink")
 legend(x = "top",inset = 0,
         legend = c("Regression Line", "Robust Regression Line"), 
         col=c('red4', 'blue4'), lwd=3, cex=1.5, horiz = TRUE)
@@ -320,53 +322,42 @@ cohort_complete
 #' This is a function that takes as impute a column of a data.table and imputes 
 #' the NAs with its mean / mode if tha vector is numeric or categorical respectively.
 #' @param x A vector of numeric or categorical values for which the NAs will be imputed.
-impute.to.mean <- function(x) {
-    if (is.double(x)){
-      x[is.na(x)] <- mean(x, na.rm=TRUE)
-    } else if (is.factor(x)){
-      uniquex = unique(x)
-      x[is.na(x)] <- uniquex[which.max(tabulate(match(x,uniquex)))]
-    } else {
-      uniquex = unique(x)
-#      x[is.na(x)] <- which.max(unique(x), na.rm=TRUE)
-      x[is.na(x)] <- uniquex[which.max(tabulate(match(x,uniquex)))]
-
-    }
+impute.to.mean = function(x) {
+    if (is.numeric(x)){
+      if (all(na.omit(x) %in% 0:1)){
+        x[is.na(x)] = unique(x)[which.max(tabulate(match(x, unique(x))))]
+      } else {x[is.na(x)] = mean(x, na.rm=TRUE)}
+    } else if (is.factor(x)){x[is.na(x)] = unique(x)[which.max(tabulate(match(x, unique(x))))]}
     return(x)
   }
 ```
 
 ```{r Impute missing values}
-# diab.dt.imputed2 <- diab.dt %>% copy() %>% 
+# diab.dt.imputed2 = diab.dt %>% copy() %>% 
 #                         .[, (numcols) := lapply(.SD, impute.to.median),.SDcols = numcols]
 # bp,diabetes,urea,creatinine,glucose, albumin
-numcols <- cohort_complete %>% select(bp,diabetes,urea,creatinine,glucose, albumin) %>% colnames
+numcols = cohort_complete %>% select(bp,diabetes,urea,creatinine,glucose, albumin) %>% colnames
 cohort_complete %>% .[, (numcols) := lapply(.SD, impute.to.mean), .SDcols = numcols]
-
-unique(cohort.dt$glucose)
+unique(cohort.dt$bp)[which.max(tabulate(match(cohort.dt$bp, unique(cohort.dt$bp))))]
 
 summary(cohort_complete)
 cohort_complete
 
-m <- matrix(c(1,2,3,4,5,6,7,7,7),nrow = 3,ncol = 3,byrow = TRUE)
+m = matrix(c(1,2,3,4,5,6,7,7,7),nrow = 3,ncol = 3,byrow = TRUE)
 layout(mat = m,heights = c(0.4,0.4,0.2))
 par(mar = c(2,2,1,1))
-plot(density(cohort.dt$bp, na.rm=TRUE), col='blue4', main='KDE of bloop pressure')
-lines(density(cohort_complete$bp), col='red4')
-plot(density(cohort.dt$diabetes, na.rm=TRUE), col='blue4', main='KDE of diabetes')
-lines(density(cohort_complete$diabetes), col='red4')
-plot(density(cohort.dt$urea, na.rm=TRUE), col='blue4', main='KDE of urea')
+barplot(rbind(table(cohort_complete$bp), table(cohort.dt$bp)), beside=TRUE, col=c('red4','blue4'), main='Histogram of Bloop pressure')
+barplot(rbind(table(cohort_complete$diabetes), table(cohort.dt$diabetes)), beside=TRUE, col=c('red4','blue4'), main='Histogram of Diabetes')
+barplot(rbind(table(cohort_complete$albumin), table(cohort.dt$albumin)), beside=TRUE, col=c('red4','blue4'), main='Histogram of Albumin')
+plot(density(cohort.dt$urea, na.rm=TRUE), col='blue4', main='KDE of Urea')
 lines(density(cohort_complete$urea), col='red4')
-plot(density(cohort.dt$creatinine, na.rm=TRUE), col='blue4', main='KDE of creatinine')
+plot(density(cohort.dt$creatinine, na.rm=TRUE), col='blue4', main='KDE of Creatinine')
 lines(density(cohort_complete$creatinine), col='red4')
-plot(density(as.numeric(factor(cohort_complete$albumin)), na.rm=TRUE), col='blue4', main='KDE of albumin')
-lines(density(as.numeric(factor(cohort_complete$albumin))), col='red4')
-legend('topright', legend=c('1: normo','2: micro','3: macro'))
-plot(density(cohort.dt$glucose, na.rm=TRUE), col='blue4', main='KDE of glucose')
+plot(density(cohort.dt$glucose, na.rm=TRUE), col='blue4', main='KDE of Glucose')
 lines(density(cohort_complete$glucose), col='red4')
 plot(1, type = "n", axes=FALSE, xlab="", ylab="")
 legend(x = "top",inset = 0,
-        legend = c("Imputed", "Original Dataset"), 
+        legend = c("Imputed", "Original"), 
         col=c('red4', 'blue4'), lwd=3, cex=1.5, horiz = TRUE)
 ```
 
@@ -374,21 +365,22 @@ legend(x = "top",inset = 0,
 
 Plot boxplots of potential predictors for diabetes grouped by cases and controls and use these to decide which predictors to keep for future analysis. For any categorical variables create a table instead. Justify your answers. 
 
-```{r}
+```{r warning=FALSE}
 # Enter code here.
 # bp,diabetes,urea,creatinine,glucose, albumin
 bp = cohort_complete$bp
 urea = cohort_complete$urea
 creatinine = cohort_complete$creatinine
-glucose = cohort.dt$glucose
+glucose = cohort_complete$glucose
 albumin = cohort_complete$albumin
 diabetes = cohort_complete$diabetes
 
-m <- matrix(c(1,2,3,4),nrow = 2,ncol = 2,byrow = TRUE)
+m = matrix(c(1,2,3,4,5,3),nrow = 2,ncol = 3,byrow = TRUE)
 layout(mat = m,heights = c(0.4,0.4,0.2))
 par(mar = c(2,2,1,1))
-boxplot(bp ~ diabetes, data=cohort_complete, main="Blood Pressuer stratified by Diabetes")
+boxplot(bp ~ diabetes, data=cohort_complete, main="Blood press stratified by Diabetes")
 boxplot(urea ~ diabetes, data=cohort_complete, main="Urea stratified by Diabetes")
+barplot(rbind(table(cohort_complete$diabetes), table(cohort.dt$albumin)), beside=TRUE, col=c('red4','blue4'), main='Algomin stratified by Diabetes')
 boxplot(creatinine ~ diabetes, data=cohort_complete, main="Creatine stratified by Diabetes")
 boxplot(glucose ~ diabetes, data=cohort_complete, main="Glucose stratified by Diabetes")
 
@@ -404,7 +396,8 @@ Use your findings from the previous exercise fit an appropriate model of diabete
 
 ```{r}
 # Enter code here.
-model1 = glm(diabetes ~ glucose + )
+model1 = glm(diabetes ~ glucose + albumin, family='binomial')
+summary(model1)
 ```
 
 
@@ -416,6 +409,15 @@ Add a third predictor to the final model from problem 3, perform a likelihood ra
  
 ```{r}
 # Enter code here.
+model2 = glm(diabetes ~ glucose + albumin + cohort_complete$age, family='binomial')
+summary(model2)
+pval = pchisq(model1$deviance - model2$deviance, df=1, lower.tail=FALSE)
+signif(pval, 2)
+
+roc1 = roc(cohort_complete$diabetes, model1$fitted.values , plot=TRUE, xlim = c(0,1))
+roc2 = roc(cohort_complete$diabetes, model2$fitted.values , plot=TRUE, xlim = c(0,1), add=TRUE, col="red4")
+roc1$auc
+roc2$auc
 ```
 
 
@@ -425,5 +427,29 @@ Perform 10-folds cross-validation for your chosen model and report the mean cros
 
 ```{r}
 # Enter code here.
+set.seed(1903)
+k = 10
+folds =createFolds(cohort_complete$diabetes, k=k)
+
+pred.cv <- NULL
+auc.cv <- numeric(k)
+
+regr.cv <- NULL
+for(f in 1:k) {
+  train.idx <- setdiff(1:nrow(cohort_complete), folds[[f]])
+  regr.cv[[f]] <- glm(diabetes ~ glucose + albumin + cohort_complete$age, family='binomial')
+}
+
+pred.cv <- NULL
+auc.cv <- numeric(k)
+for(f in 1:k) {
+  test.idx <- folds[[f]] 
+  pred.cv[[f]] <- data.frame(obs = cohort_complete$diabetes[test.idx],
+                             pred = predict(regr.cv[[f]], newdata = cohort_complete, type = "response")[test.idx])
+  auc.cv[f] <- roc(obs ~ pred, data = pred.cv[[f]])$auc
+}
+
+round(mean(auc.cv), 3)
+
 ```
 
