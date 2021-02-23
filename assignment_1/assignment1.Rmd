@@ -156,16 +156,20 @@ m = matrix(c(1,2,3,4,5,5),nrow = 3,ncol = 2,byrow = TRUE)
 layout(mat = m,heights = c(0.4,0.4,0.2))
 
 par(mar = c(2,2,1,1))
-plot(subset_1[,fu.years], subset_1[,egfr], xlab='years', ylab='egfr', main='patient ID:3')
+plot(subset_1[,fu.years], subset_1[,egfr], xlab='years',
+     ylab='egfr', main='patient ID:3')
 abline(reg1, col='red4')
 abline(reg1_rob, col='blue4')
-plot(subset_2[,fu.years], subset_2[,egfr], xlab='years', ylab='egfr', main='patient ID:37')
+plot(subset_2[,fu.years], subset_2[,egfr], xlab='years',
+     ylab='egfr', main='patient ID:37')
 abline(reg2, col='red4')
 abline(reg2_rob, col='blue4')
-plot(subset_3[,fu.years], subset_3[,egfr], xlab='years', ylab='egfr', main='patient ID:162')
+plot(subset_3[,fu.years], subset_3[,egfr], xlab='years',
+     ylab='egfr', main='patient ID:162')
 abline(reg3, col='red4')
 abline(reg3_rob, col='blue4')
-plot(subset_4[,fu.years], subset_4[,egfr], xlab='years', ylab='egfr', main='patient ID:223')
+plot(subset_4[,fu.years], subset_4[,egfr], xlab='years',
+     ylab='egfr', main='patient ID:223')
 abline(reg4, col='red4')
 abline(reg4_rob, col='blue4')
 plot(1, type = "n", axes=FALSE, xlab="", ylab="")
@@ -237,8 +241,16 @@ scr.dt[,scr_est1:=175*
          (fifelse(scr.dt[,sex=='Female'],0.742,1, na=1))*
          (fifelse(scr.dt[,ethnic=='Black'],1.212,1,na=1))]
 
-scr.dt[,min_scr_1:=pmin(scr/fifelse(scr.dt[,sex=='Female'],0.7,0.9,na=1),1, na.rm=TRUE)^(fifelse(scr.dt[,sex=='Female'],-0.329,-0.411,na=1))]
-scr.dt[,max_scr_1:=pmax(scr/fifelse(scr.dt[,sex=='Female'],0.7,0.9,na=1),1, na.rm=TRUE)^(-1.209)]
+scr.dt[,min_scr_1:=pmin(scr/fifelse(scr.dt[,sex=='Female'],
+                                    0.7,
+                                    0.9,
+                                    na=1),
+                        1, na.rm=TRUE)^(fifelse(scr.dt[,sex=='Female'],-0.329,-0.411,na=1))]
+scr.dt[,max_scr_1:=pmax(scr/fifelse(scr.dt[,sex=='Female'],
+                                    0.7,
+                                    0.9,
+                                    na=1),
+                        1, na.rm=TRUE)^(-1.209)]
 scr.dt[,scr_est2:=141*
          min_scr_1*
          max_scr_1*
@@ -255,12 +267,16 @@ cat('\nStandard deviations of eGFR according to MDRD4',sd_est_1)
 cat('\nMean of eGFR according to CKD-EPI',mean_est_2)
 cat('\nStandard deviations of eGFR according to CKD-EPI',sd_est_2)
 
-cat('\nLinear correlation of the two estimates of eGFR',cor(scr.dt$scr_est1,scr.dt$scr_est2, method='pearson', use = "complete.obs"))
-```
-Report (rounded to the second decimal place) mean and standard deviation of the two eGFR vectors and their Pearson correlation
-coefficient. Also report the same quantities according to strata of MDRD4 eGFR: 0-60, 60-90 and > 90. 
+cat('\nLinear correlation of the two estimates of eGFR',
+    cor(scr.dt$scr_est1,scr.dt$scr_est2, method='pearson', use = "complete.obs"))
 
-**Write up:** We can clearly see from the output of the code above, that the two estimates are very similar in their mean and deviation. The linear correlation estimate of 95.3% is also a very good indicator of that. 
+eGFR_strata = cut(scr.dt$scr_est1, c(0, 60, 90, Inf))
+cat('\nMean of MDRD4 per strata')
+tapply(scr.dt$scr_est1, eGFR_strata, mean)
+cat('\nStandard deviations of MDRD4 per strata')
+tapply(scr.dt$scr_est1, eGFR_strata, sd)
+```
+**Write up:** We can clearly see from the output of the code above, that the two estimates are very similar in their mean and deviation. The linear correlation estimate of 95.3% is also a very good indicator of that. The same measurement per strata 0-60, 60-90 and > 90 are also reported for MDRD4.
 
 
 ### Problem 2.c (7 points)
@@ -271,7 +287,8 @@ equations linear? Justify your answer.
 
 ```{r}
 # Enter code here.
-plot(scr.dt$scr_est1,scr.dt$scr_est2, xlab='MDRD4', ylab='CKD-EPI', main='Linearity check between MDRD4 & CKD-EPI')
+plot(scr.dt$scr_est1,scr.dt$scr_est2, xlab='MDRD4', ylab='CKD-EPI',
+     main='Linearity check between MDRD4 & CKD-EPI')
 abline(v=median(scr.dt$scr_est1, na.rm=TRUE), col='blue4')
 abline(v=quantile(scr.dt$scr_est1, na.rm=TRUE)[2], col='blue4')
 abline(v=quantile(scr.dt$scr_est1, na.rm=TRUE)[4], col='blue4')
@@ -360,19 +377,30 @@ impute.to.mean = function(x) {
 ```
 
 ```{r Impute missing values, warning=FALSE}
-numcols = cohort_complete %>% select(bp,diabetes,urea,creatinine,glucose, albumin) %>% colnames
-cohort_complete %>% .[, (numcols) := lapply(.SD, impute.to.mean), .SDcols = numcols]
+numcols = cohort_complete %>% 
+  select(bp,diabetes,urea,creatinine,glucose, albumin) %>%
+  colnames
+cohort_complete %>%
+  .[, (numcols) := lapply(.SD, impute.to.mean), .SDcols = numcols]
 m = matrix(c(1,2,3,4,5,6,7,7,7),nrow = 3,ncol = 3,byrow = TRUE)
 layout(mat = m,heights = c(0.4,0.4,0.2))
 par(mar = c(2,2,1,1))
-barplot(rbind(table(cohort_complete$bp), table(cohort.dt$bp)), beside=TRUE, col=c('red4','blue4'), main='Histogram of Bloop pressure')
-barplot(rbind(table(cohort_complete$diabetes), table(cohort.dt$diabetes)), beside=TRUE, col=c('red4','blue4'), main='Histogram of Diabetes')
-barplot(rbind(table(cohort_complete$albumin), table(cohort.dt$albumin)), beside=TRUE, col=c('red4','blue4'), main='Histogram of Albumin')
-plot(density(cohort.dt$urea, na.rm=TRUE), col='blue4', main='KDE of Urea')
+barplot(rbind(table(cohort_complete$bp), table(cohort.dt$bp)), beside=TRUE,
+        col=c('red4','blue4'), main='Histogram of Bloop pressure')
+barplot(rbind(table(cohort_complete$diabetes), table(cohort.dt$diabetes)),
+        beside=TRUE, col=c('red4','blue4'),
+        main='Histogram of Diabetes')
+barplot(rbind(table(cohort_complete$albumin), table(cohort.dt$albumin)),
+        beside=TRUE, col=c('red4','blue4'),
+        main='Histogram of Albumin')
+plot(density(cohort.dt$urea, na.rm=TRUE), col='blue4',
+     main='KDE of Urea')
 lines(density(cohort_complete$urea), col='red4')
-plot(density(cohort.dt$creatinine, na.rm=TRUE), col='blue4', main='KDE of Creatinine')
+plot(density(cohort.dt$creatinine, na.rm=TRUE), col='blue4',
+     main='KDE of Creatinine')
 lines(density(cohort_complete$creatinine), col='red4')
-plot(density(cohort.dt$glucose, na.rm=TRUE), col='blue4', main='KDE of Glucose')
+plot(density(cohort.dt$glucose, na.rm=TRUE), col='blue4',
+     main='KDE of Glucose')
 lines(density(cohort_complete$glucose), col='red4')
 plot(1, type = "n", axes=FALSE, xlab="", ylab="")
 legend(x = "top",inset = 0,
@@ -397,12 +425,20 @@ diabetes = cohort_complete$diabetes
 m = matrix(c(1,2,3,4,5,6),nrow = 2,ncol = 3,byrow = TRUE)
 layout(mat = m,heights = c(0.4,0.4,0.2))
 par(mar = c(2,2,1,1))
-boxplot(bp ~ diabetes, data=cohort_complete, main="Blood press stratified by Diabetes")
-boxplot(urea ~ diabetes, data=cohort_complete, main="Urea stratified by Diabetes")
-boxplot(age ~ diabetes, data=cohort_complete, main="Age stratified by Diabetes")
-barplot(rbind(table(cohort_complete$diabetes), table(cohort_complete$albumin)), beside=TRUE, col=c('red4','blue4'), main='Algomin stratified by Diabetes')
-boxplot(creatinine ~ diabetes, data=cohort_complete, main="Creatine stratified by Diabetes", ylim=c(0,1500))
-boxplot(glucose ~ diabetes, data=cohort_complete, main="Glucose stratified by Diabetes")
+boxplot(bp ~ diabetes, data=cohort_complete,
+        main="Blood press stratified by Diabetes")
+boxplot(urea ~ diabetes, data=cohort_complete,
+        main="Urea stratified by Diabetes")
+boxplot(age ~ diabetes, data=cohort_complete,
+        main="Age stratified by Diabetes")
+barplot(rbind(table(cohort_complete$diabetes),
+              table(cohort_complete$albumin)),
+        beside=TRUE, col=c('red4','blue4'),
+        main='Algomin stratified by Diabetes')
+boxplot(creatinine ~ diabetes, data=cohort_complete,
+        main="Creatine stratified by Diabetes", ylim=c(0,1500))
+boxplot(glucose ~ diabetes, data=cohort_complete,
+        main="Glucose stratified by Diabetes")
 
 albumin_table = table(albumin, diabetes)
 colnames(albumin_table) = c("No Diabetes", "Diabetes")
@@ -425,6 +461,7 @@ The above results comes from a very simple linear model that uses  the variables
 
 $\text{diabetes} = -3.151 +  0.018 \times \text{glucose} + 0.535 [\text{if albumin is normo}] -0.448[\text{if albumin is micro}]$
 
+The interpretation of the coefficient of glucose is: *If every other variable in our model remain exactly the same, an glucose increases by one unit of measurement, the prediction for diabetes will also increase by 0.018 units.*. Diabetes is a binary variable, but we can convert our continuous in (0,1) prediction to binary with a rule, i.e. if diabetes > 0.5 then 1, else 0.
 The second most important thing to investigate is the star values next to the coefficients. Those signal the confidence that our data allows us to have on those coefficients. If the confidence is low (no stars), that means that, from the specific dataset, we **cannot** safely assume that this output is different than zero. So for example, we have much confidence in the coefficient of glucose to be different than zero, but we cannot say the same for albumin which doesn't have significance. 
 
 \newpage
@@ -437,21 +474,29 @@ Add a third predictor to the final model from problem 3, perform a likelihood ra
  
 ```{r}
 # Enter code here.
-model2 = glm(diabetes ~ glucose + albumin + cohort_complete$age, family='binomial')
+model2 = glm(diabetes ~ glucose + albumin + cohort_complete$age,
+             family='binomial')
 summary(model2)
 ```
+Now we are considering a different model, one that has three variables to help us predict the existence of diabetes or not on a patient. We have the same model as above with the addition of the variable 'age'. As described above, we see a very significant positive linear relationship between age and diabetes.
+
 ```{r}
 pval = pchisq(model1$deviance - model2$deviance, df=1, lower.tail=FALSE)
 signif(pval, 2)
 ```
+We performed a statistical test in order to understand whether the addition of the new variable is of benefit, and since it is smaller than our significane level of 0.05 we can safely assume that the addition will increase our accuracy in predicting. 
 
-```{r}
-roc1 = roc(cohort_complete$diabetes, model1$fitted.values , plot=TRUE, xlim = c(0,1))
-roc2 = roc(cohort_complete$diabetes, model2$fitted.values , plot=TRUE, xlim = c(0,1), add=TRUE, col="red4")
+```{r message=FALSE}
+roc1 = roc(cohort_complete$diabetes, model1$fitted.values , plot=TRUE,
+           xlim = c(0,1), col="blue4")
+roc2 = roc(cohort_complete$diabetes, model2$fitted.values , plot=TRUE, 
+           xlim = c(0,1), add=TRUE, col="red4")
+legend(x = 'topright', legend = c("First Model", "Second Model"), 
+        col=c('blue4', 'red4'), lwd=2)
 roc1$auc
 roc2$auc
 ```
-
+Also we are reporting the ROC curves. These curves are illustrating how well a binary classifier predict the outcome. This diagram plots the True Positive Rate (sensitivity), against the False positive rate (specificity). The gray line represents a classifier that is guessing the outcome of a person having diabetes completely at random. As we go up and to the right of the diagram, we will have a perfect classifier. In this example, we can clearly see that the red curve, which represents the second-augmented model, is further to the upper right corner than the blue line that represents our baseline model. However a better way to quantify this relationship is to measure the Area Under the ROC Curves (AUC). Whichever curves has bigger AUC score, is a better model. The results are presented above and we can therefore trust our second model more for prediction.
 
 ### Problem 4.b (10 points)
 
@@ -468,13 +513,18 @@ regr.cv <- NULL
 auc.cv <- numeric(k)
 for(f in 1:k) {
   train.idx <- setdiff(1:nrow(cohort_complete), folds[[f]])
-  regr.cv[[f]] <- glm(diabetes ~ glucose + albumin + cohort_complete$age, family='binomial')
+  regr.cv[[f]] <- glm(diabetes ~ glucose + albumin + cohort_complete$age,
+                      family='binomial')
   test.idx <- folds[[f]] 
   pred.cv[[f]] <- data.frame(obs = cohort_complete$diabetes[test.idx],
-                             pred = predict(regr.cv[[f]], newdata = cohort_complete, type = "response")[test.idx])
+                             pred = predict(regr.cv[[f]],
+                                            newdata = cohort_complete,
+                                            type = "response")[test.idx])
   auc.cv[f] <- roc(obs ~ pred, data = pred.cv[[f]])$auc
 }
 
 round(mean(auc.cv), 3)
 ```
 
+Lastly, we performed the same test as above with our second final model, but with cross-validation, in order to come up, with a better estimate of the AUC score. Cross validation is a technique, in which we partition our dataset into 10 equal portions called folds. Then we use 9 folds to build the model and the last fold to measure our prediction accuracy. Then we repeat and use 9 different folds for model fitting and a different fold for measuring prediction accuracy, until we have no more folds. In the end of the process we have 10 estimates for the AUC score, which we average in order to have a final estimate for the AUC score, but with much more confidence than simply performing it once.
+The final AUC score is $\text{AUC} = 0.843$, which is close to the previous one which was $\text{AUC}=0.8522$. 
