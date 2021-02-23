@@ -319,7 +319,13 @@ cohort_complete
 #' the NAs with its mean / mode if tha vector is numeric or categorical respectively.
 #' @param x A vector of numeric or categorical values for which the NAs will be imputed.
 impute.to.mean <- function(x) {
-    if (is.double(x)){x[is.na(x)] <- mean(x, na.rm=TRUE)} else {x[is.na(x)] <- mode(x)}
+    if (is.numeric(x) || is.integer(x)){
+      x[is.na(x)] <- mean(x, na.rm=TRUE)
+    } else if(is.factor(x)) {
+      x[is.na(x)] <- aggregate(value~factor, FUN=mean)
+    }else {
+      x[is.na(x)] <- mode(x)
+      }
     return(x)
   }
 ```
@@ -327,11 +333,32 @@ impute.to.mean <- function(x) {
 ```{r Impute missing values}
 # diab.dt.imputed2 <- diab.dt %>% copy() %>% 
 #                         .[, (numcols) := lapply(.SD, impute.to.median),.SDcols = numcols]
+numcols <- cohort_complete %>% select(bp,diabetes,urea,creatinine,glucose) %>% colnames
+cohort_complete %>% .[, (numcols) := lapply(.SD, impute.to.mean), .SDcols = numcols]
 
-numcols <- cohort.dt %>% select(bp) %>% colnames
-cohort.dt %>% .[, (numcols) := lapply(.SD, impute.to.mean),.SDcols = numcols]
+summary(cohort_complete)
 
-(cohort.dt)
+m <- matrix(c(1,2,3,4,5,6,7,7,7),nrow = 3,ncol = 3,byrow = TRUE)
+layout(mat = m,heights = c(0.4,0.4,0.2))
+par(mar = c(2,2,1,1))
+plot(density(cohort.dt$bp, na.rm=TRUE), col='blue4', main='KDE of bloop pressure')
+lines(density(cohort_complete$bp), col='red4')
+plot(density(cohort.dt$diabetes, na.rm=TRUE), col='blue4', main='KDE of diabetes')
+lines(density(cohort_complete$diabetes), col='red4')
+plot(density(cohort.dt$urea, na.rm=TRUE), col='blue4', main='KDE of urea')
+lines(density(cohort_complete$urea), col='red4')
+plot(density(cohort.dt$creatinine, na.rm=TRUE), col='blue4', main='KDE of creatinine')
+lines(density(cohort_complete$creatinine), col='red4')
+plot(density(cohort.dt$glucose, na.rm=TRUE), col='blue4', main='KDE of glucose')
+lines(density(cohort_complete$glucose), col='red4')
+
+plot(density(cohort.dt$glucose, na.rm=TRUE), col='blue4', main='KDE of glucose')
+lines(density(cohort_complete$glucose), col='red4')
+
+plot(1, type = "n", axes=FALSE, xlab="", ylab="")
+legend(x = "top",inset = 0,
+        legend = c("Imputed", "Original Dataset"), 
+        col=c('red4', 'blue4'), lwd=3, cex=1.5, horiz = TRUE)
 ```
 
 ### Problem 3.c (6 points)

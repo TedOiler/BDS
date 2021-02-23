@@ -187,7 +187,7 @@ and maximum of the two “Murder” variables.
 ```{r}
 USdata.dt[, MeanMurder := mean(c(Murder.x,Murder.y)), by=State]
 USdata.dt[, MaxMurder := max(c(Murder.x,Murder.y)), by=State]
-
+USdata.dt
 summary(USdata.dt)
 ```
 
@@ -225,7 +225,7 @@ mean(diab.dt$TC, na.rm=TRUE)
 ```
 
 
-In other situations, however, it’s not quite as easy. In such cases, we could discard all observation with any missing element using the na.omit() function.
+In other situations, however, it’s not quite as easy. In such cases, we could discard all observation with any missing element using the na.    () function.
 ```{r}
 diab.dt.complete <- na.omit(diab.dt)
 
@@ -589,6 +589,7 @@ head(model.matrix(~ AGE + SEX, data=diab.dt.imputed2))
 For a categorical variable with k levels, the design matrix contains k − 1 dummy variables corresponding to
 all non-reference categories. For example, suppose we categorized patients by age in three strata:
 ```{r}
+diab.dt.imputed2
 diab.dt.imputed2$AGE.CAT <- cut(diab.dt.imputed2$AGE, c(0, 40, 60, Inf))
 head(diab.dt.imputed2[, c("AGE", "AGE.CAT")])
 ```
