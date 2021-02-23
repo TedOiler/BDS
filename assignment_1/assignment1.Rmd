@@ -6,6 +6,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
+rm(list=ls())
 knitr::opts_chunk$set(echo = TRUE)
 require(dplyr)
 require(tidyr)
@@ -14,7 +15,6 @@ require(magrittr)
 require(ggplot2)
 library(pROC)
 library(caret)
-rm(list=ls())
 ```
 
 # Assignment 1
@@ -425,24 +425,18 @@ roc2$auc
 
 Perform 10-folds cross-validation for your chosen model and report the mean cross-validated AUCs.
 
-```{r}
+```{r message=FALSE}
 # Enter code here.
 set.seed(1903)
 k = 10
-folds =createFolds(cohort_complete$diabetes, k=k)
+folds = createFolds(cohort_complete$diabetes, k=k)
 
 pred.cv <- NULL
-auc.cv <- numeric(k)
-
 regr.cv <- NULL
+auc.cv <- numeric(k)
 for(f in 1:k) {
   train.idx <- setdiff(1:nrow(cohort_complete), folds[[f]])
   regr.cv[[f]] <- glm(diabetes ~ glucose + albumin + cohort_complete$age, family='binomial')
-}
-
-pred.cv <- NULL
-auc.cv <- numeric(k)
-for(f in 1:k) {
   test.idx <- folds[[f]] 
   pred.cv[[f]] <- data.frame(obs = cohort_complete$diabetes[test.idx],
                              pred = predict(regr.cv[[f]], newdata = cohort_complete, type = "response")[test.idx])
@@ -450,6 +444,5 @@ for(f in 1:k) {
 }
 
 round(mean(auc.cv), 3)
-
 ```
 
