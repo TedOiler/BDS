@@ -1,0 +1,463 @@
+---
+title: "Lab 4: High-dimensional datasets"
+author: "Debby Lipschutz (modified from Stuart McGurnaghan)"
+date: "21/02/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1. Correlation plots
+
+When we have a large number of numeric potential predictors, it can be useful to examine the correlation matrix to identify any potential colinearity between variables which might violate your modeling assumptions and reduce the number of predictors to consider in your model. Let's consider the dataset provided with this worksheet called 'cancer_reg.csv'. This dataset contains cancer death rates in US counties and and 33 other variables.   
+
+```{r}
+library(data.table)
+library(magrittr)
+
+cancer.dt <- fread("data/cancer_reg.csv")
+
+numcols <- sapply(cancer.dt, is.numeric) 
+cor.cancer <- cancer.dt[, ..numcols] %>% #subset of numeric columns
+            cor(use="pairwise.complete")
+dim(cor.cancer)
+```
+
+
+Examining all these values is impractical, a good way of visualizing the strength of correlation between the variables is by creating a correlation plot. The package corrplot provides a good implementation of such plots (you might need to install it first by typing install.packages('corrplot') in the console pane).
+```{r}
+library(corrplot)
+
+corrplot(cor.cancer)
+```
+
+
+Due to the (modestly) large number of variables this is still difficult to examine. The default plot can be improved by using some of the available options (see https://cran.r-project.org/web/packages/corrplot/vignettes/corrplot-intro.html for more options).
+```{r}
+corrplot(cor.cancer, order="hclust",                   # order the variablesby correlation clusters
+         diag=FALSE,                                   # remove the diagonal elements
+         tl.col="black", tl.cex = 0.5,                 # change the colour and size of the labels
+        title="Correlation matrix (ordered by hierarchical clustering)", 
+        type = 'upper',                                # display the upper triangle only 
+        mar=c(0,0,1,0))                                # change the size of the margins (bottom, left, top, right) 
+```
+
+
+Looking at the above plot we can see that there are strong associations between variables which seem to indicate wealth/poverty. Taking this into account and the correlations with death rate in the top row it would be reasonable to look at fitting a model using only incidence rate and a measure of wealth/poverty such as median income. Depending on our research area we might want to check whether there is any support for including ethnic composition, education or health coverage once incidence rate and wealth/poverty has been taken into account. It is also important to note that correlations only indicate the strength of linear association. So a lack of association may be due to a lack of relationship or the nature of that relationship. Some transformation of the variables with little or no association may be needed. Again you can reduce the number of variables you look at heuristically. Here, variables such as birth rate and population size clearly shouldn't be included however it would be sensible to investogate the age variables. Moreover, the fact that the overall median age doesnn't appear to be associated with the median age for males or females strongly indicates that this data needs to be looked at.
+```{r}
+with(cancer.dt, plot(MedianAge, MedianAgeMale))
+
+library(moments)
+skewness(cancer.dt$MedianAge, na.rm=T)
+```
+```{r}
+cancer.dt[MedianAge > 120, 'MedianAge':=MedianAge/12] # change from monthly to yearly scale
+
+with(cancer.dt, hist(MedianAge))
+
+# Create variable with median age grouped by 10% quantiles
+cancer.dt$binnedAge <- cancer.dt$MedianAge %>%
+                        quantile(probs = seq(0, 1, 0.1)) %>%
+                        cut(cancer.dt$MedianAge,.)            
+
+with(cancer.dt, boxplot(TARGET_deathRate ~ binnedAge))
+```
+
+
+
+# 2. Subset selection
+
+Stepwise selection can be executed through function stepAIC() provided by the MASS package. The function requires an initial model, and adds or removes one predictor at a time (according to what is specified in the direction parameter) until no improvement in AIC can be produced.
+ 
+```{r}
+library(MASS)
+
+full.model <- lm(TARGET_deathRate ~ incidenceRate + medIncome + 
+                         PctPrivateCoverage + PctPublicCoverage +
+                         PctWhite + PctBlack + PctAsian, data=cancer.dt) 
+
+sel.back <- stepAIC(full.model, direction="back") # backward elimination
+```
+
+At each iteration of the selection process all attempted models are fitted on the data and their AICs are
+compared. The chosen model is the one that produces the lowest AIC. Among the models compared there is
+also the current one (indicated by <none>). When this produces the lowest AIC, the process stops.
+In this case, backward elimination stopped after the first iteration. After that, the removal of any other variables would cause an increase in AIC, so backward elimination stops. Note however that the increase in AIC caused by removing percent white, percent asian or percent public health coverage is negligible.
+
+The object produced by stepAIC() is identical to one produced by lm() or glm(), and it corresponds to the
+final model. So, for example, to see the results of fitting the model we can use summary().
+```{r}
+summary(sel.back)
+```
+
+
+We could now try forward selection on the same dataset. When going forward, the scope parameter must
+always be specified to indicate the upper model, that is which variables should be considered in the selection
+process (when going backward this is implied by the initial model, which by definition includes all variables
+of potential interest).
+```{r}
+null.model <- lm(TARGET_deathRate ~ 1, data=cancer.dt) # only include the intercept
+sel.forw <- stepAIC(null.model, scope=list(upper=full.model), direction="forward")
+```
+
+### Exercise 2.1
+Perform both forward and backward selection using all the variables from the diab01.txt dataset from Learn, except for the patient identifier, and discuss the results. Make sure that both forward and backward methods are forced to include both age and sex (hint: use scope for the backwards method).    
+```{r}
+diab01.dt <- fread('data/diab01.txt')
+diab01.dt.complete <- na.omit(diab01.dt)
+
+# '.' is shorthand for use every column except the outcome.
+full.model <- lm(Y ~ ., data=diab01.dt.complete[,!'PAT'])       
+null.model <- lm(Y ~ AGE + SEX, data=diab01.dt.complete[,!'PAT'])
+
+# From full to null
+back.diab <- stepAIC(full.model, scope=list(lower=null.model), direction="back")
+```
+```{r}
+# From null to full
+forw.diab <- stepAIC(null.model, scope=list(upper=full.model), direction="forward")
+```
+
+Starting from the full model only glucose gets excluded, whereas if we start from the null model LDL cholesterol and total cholesterol also get excluded. In other words LDL cholesterol and total cholesterol can further reduce the AIC but only when taken together. We can also see that starting from the null model, glucose only gets excluded once BMI is included in the model. This makes sense as glucose and BMI are likely to be associated. BMI is a very useful variable as it is very easy to obtain but depending on the purpose of your study you might prefer to keep glucose for biological reasons. This can be remedied by adding glucose to the null model.   
+
+
+# 3. Principal component analysis
+
+If we are more interested in getting strong predictions and are less worried about being able to interpret the results we can use a numerical approach to reduce dimensionality such as principal component analysis (PCA). PCA reduces dimensionality by taking the eigenvectors (principle components) of the variance-covariance matrix of the variables and ordering by the size of their eigenvalues (i.e. by how much variance in the data they explain). So by definition each principle component is a linear combination of the variables and they are uncorrelated to each other. 
+
+PCA can be run by using the function prcomp(). It is of course only possible to do this with numerical variables, and missing values need to be removed or imputed. Also make sure that the outcome variable is not included in the PCA analysis. Setting options center and scale to TRUE standardizes your data and is always advised.
+```{r}
+apply(cancer.dt, 2, is.na) %>% colSums() %>% sort
+```
+
+### Exercise 3.1
+For this example we are just going to get rid of the columns with missing values discuss with your peers what your other options are.
+
+'PctSomeCol18_24' - 75% of the data is missing in this column. However, further scrutiny will show that PctSomeCol18_24 is equal to 100 - the row sum of all the other educational attainment categories for 18-24 year olds. 
+
+'PctPrivateCoverageAlone' - 20% of the data is missing and cannot be obtained directly from other variables. It could, however, be predicted from the other variables with some degree of accuracy. The value of this is debatable. 
+
+'PctEmployed16_Over' - Only 5% of the data is missing, you could do is simple imputation using a constant such as the mean/mode etc (or even use the mean/mode by groups) if you want to avoid colinearity but if colinearity is being dealt with because you are using PCA or a similar method then again you can predict it to some extent using the other data.
+
+
+
+```{r}
+# Remove unwanted columns
+numcols[c('TARGET_deathRate', 'PctEmployed16_Over', 'PctPrivateCoverageAlone', 'PctSomeCol18_24', 'avgAnnCount', 'avgDeathsPerYear', 'popEst2015', 'BirthRate')] <- F
+
+pca.vars <- prcomp(cancer.dt[, ..numcols], center = T, scale = T)
+```
+
+
+The amount of variability explained by the components can be computed bearing in mind that the square
+root of the eigenvalues is stored in vector sdev of the PCA object. The variance explained by
+the principal components can be visualized through a scree plot.
+```{r}
+summary(pca.vars)
+
+perc.expl <- pca.vars$sdev^2 / sum(pca.vars$sdev^2)
+sum(perc.expl[1:2])
+```
+```{r}
+screeplot(pca.vars, main="Scree plot")
+```
+
+
+### Exercise 3.2
+Discuss how you would decide which components to keep.
+
+Looking at the screeplot we can see that after the 5th or 6th variable the curve flattens and there doesn't seem to be much more gain to be had by adding more components.
+You may decide that it's important that for example 80% of the variation is explained, in that case you would check the cumulative proportion and keep 7 or 8 components.
+Or you could say that you will only keep components that explain at least 1 standard deviation of the data in which case you would keep 6 components.
+A good idea is to check all three.
+
+
+A useful way to visualise the principle components is to plot them against each other. We can use colour to see how well the components separate data in terms of their death rate. 
+```{r}
+library(factoextra)
+
+fviz_pca_ind(pca.vars, geom='point',
+             habillage = cut(cancer.dt$TARGET_deathRate,quantile(cancer.dt$TARGET_deathRate)), #colour by deathrate
+             addEllipses = T)
+```
+
+```{r}
+fviz_pca_ind(pca.vars, geom='point', axes = c(2,3),
+             habillage = cut(cancer.dt$TARGET_deathRate,quantile(cancer.dt$TARGET_deathRate)), 
+             addEllipses = T)
+```
+
+### Exercise 3.3
+Discuss what you see and what your next steps would be.
+
+The datapoints in the above plot are the individual counties. They were artificially grouped and coloured by quartile. The x-axis in the first plot is the first principle component and the value between brackets is the proportion of the variance it explains. The y-axis in the first graph is the second component and in the second graph the counties are projected on the plane formed by the second and third components. The ellipses contain 95% of the data in each group around a centroid which is indicated by a slightly larger datapoint.
+Looking at both graphs we can see that the ellipses overlap. This isn't entirely surprising as deathrate is a continuous variable which we grouped artificially. To overcome this we could just look at the largest and lowest quartiles.
+Furthermore, each component simply describes the variation in a dataset. A dataset which contains a few variables that are associated with our outcome of interest and a lot more variables that aren't won't be very good at separating individual observations of the outcome. This isn't entirely the case with our dataset as while the elipses overlap, for the first two principal components they do separate slightly in the right order along the x and y axes. If you look closely you might see that the centroids are separated in the right order along the x-axis for the first principal component and marginally so along the y-axis for the second principal component. However, in the second graph the ellipses completely overlap. Removing a few variables which weren't associated with our outcome of interest in the correlation matrix may help improve matters.
+Finally, so far we have not cleaned our data at all. The first two components contain the largest variation in our data it is therefore a good idea t examine the subset of most extreme values for the first two components as they are likely to contain outliers. 
+
+
+
+```{r}
+fviz_pca_biplot(pca.vars, geom='point', repel = T)
+```
+
+
+### Exercise 3.4
+Discuss what you see in the above plot and how it relates to what you observed using the correlation matrix.
+
+The above plot is a visual representation of the linear composition of the components. The dots are the same datapoints then in the previous graph but without colour and each arrow represents the direction of each variable in the the 2D plane of the two first components.
+For the first component we would look at the variables with greatest magnitude along the x-axis, i.e. furthest to the left and furthest to the right. Doing so, you might notice that the first component mainly assigns large positive values to indicators of wealth and large negative values to indicators of poverty. The actual coefficients for each variable for the first two principal components is given below.  
+For the second component we look at the variables with the greatest magnitude along the y-axis, i.e. the highest and lowest variables. For thi component we can see that ethnic composition, age and household-type carry the most weight. 
+This roughly follows the blocks that we observed in the correlation plot which isn't surprising given that the components are the eigenvectors of the variance-covariance matrix of the the predictor variables. 
+
+
+```{r}
+pca.vars$rotation[,1:2]
+```
+
+
+# 4. Regularisation approaches
+
+Ridge regression, lasso and elastic net are implemented in the glmnet package. There are two main functions provided by the package, glmnet() and cv.glmnet(). The first fits a regularised
+model for a series of values of the penalty parameter $\lambda$ (by default 100, but it may be truncated for small
+datasets). The second, run an internal cross-validation to identify which specific setting of $\lambda$ performs better
+when predicting the observations in the test set.
+Unfortunately, neither function accepts formulas to define models, but expects matrices and vectors as input.
+You can use the following function to facilitate the tranformation of a dataframe to a matrix as expected by
+the glmnet package.
+```{r}
+prepare.glmnet <- function(data, formula=~ .) {
+                ## create the design matrix to deal correctly with factor variables,
+                ## without losing rows containing NAs
+                old.opts <- options(na.action='na.pass')
+                x <- model.matrix(formula, data)
+                options(old.opts)
+                
+                ## remove the intercept column, as glmnet will add one by default
+                x <- x[, -match("(Intercept)", colnames(x))]
+                return(x)
+}
+```
+
+
+By default, the function uses all existing columns in the dataframe to create. We do not want the
+outcome variable to be in the matrix of predictors so we remove it before converting the rest of the dataframe
+to a matrix.
+```{r}
+impute.to.median <- function(x) {
+                        na.idx <- is.na(x)
+                        x[na.idx] <- median(x, na.rm=TRUE)
+                        
+                        return(x)
+                    }
+
+numcols.diab <- diab01.dt[,.SD,.SDcols=sapply(diab01.dt, is.numeric)] %>% colnames
+diab01.dt.imputed <- diab01.dt %>% copy() %>% 
+                        .[, (numcols.diab) := lapply(.SD, impute.to.median),.SDcols = numcols.diab]
+
+ydiab01.dt <- diab01.dt.imputed$Y # store the outcome separately
+xdiab01.dt <- prepare.glmnet(diab01.dt.imputed[,!"PAT"], formula=~ . - Y) # exclude the outcome
+```
+
+
+Now we are finally ready to fit the first regularised model. By default, the function glmnet() will fit a linear
+regression with lasso penalty. To change it to ridge regression, set the alpha option to 0.
+```{r}
+library(glmnet)
+
+fit.lasso <- glmnet(xdiab01.dt, ydiab01.dt) # same as setting alpha=1
+fit.ridge <- glmnet(xdiab01.dt, ydiab01.dt, alpha=0)
+```
+
+
+To see the trajectories of the coefficients for the various choices of $\lambda$ it’s enough to use plot() on the fitted objects.
+```{r}
+par(mfrow=c(1,2), mar=c(4,4,5,2))
+plot(fit.lasso, main="Lasso trajectories")
+plot(fit.ridge, main="Ridge trajectories")
+```
+
+
+The x-axis indicates the L1 norm of the regression coefficients. When the penalty parameter $\lambda$ is at its
+maximum value all coefficients are zero (null model). By decreasing the strength of the penalty term, the
+coefficients are allowed to increase. The numbers at the top of the plot count the number of nonzero variables. Note how for ridge all predictors become very soon nonzero, while for lasso this happens in a staggered way.
+
+The model coefficients depend on the choice of $\lambda$. They can be found in the fields a0 (for intercepts) and
+beta (for predictors) of the fitted objects, while the value of the corresponding penalty factor is stored in the
+lambda field. Assuming that we were interested in the 10-th value of $\lambda$, we could retrieve the corresponding
+model coefficients by subsetting.
+```{r}
+idx <- 10
+lambda10 <- fit.lasso$lambda[idx]
+fit.lasso$a0[idx] # intercept
+```
+```{r}
+fit.lasso$beta[, idx] # coefficients
+```
+
+Note that because of the regularization term, we are not able to produce estimates of the standard error
+and consequently p-values. 
+The predict() method works in a similar way as for linear and logistic regression. However, unless otherwise
+specified through the s option, the returned values correspond again to all settings of $\lambda$. Also, there are a few more types of values that can be obtained through this function (see ?predict.glmnet for more details).
+
+In most cases we are interested only in a specific setting of the penalty parameter, ideally one which will be
+most effective in prediction. To identify it, we can use function cv.glmnet() to perform cross-validation: this
+happens within the function, so we do not need to create a specific set of folds for that (although we may do
+if we were to learn or tune other parameters).
+```{r}
+fit.cv.lasso <- cv.glmnet(xdiab01.dt, ydiab01.dt)
+fit.cv.ridge <- cv.glmnet(xdiab01.dt, ydiab01.dt, alpha=0)
+```
+
+
+Plotting the cross-validation curve allows us to inspect how prediction errors vary according to the amount of
+shrinkage applied.
+```{r}
+par(mfrow=c(1,2), mar=c(4,4,5,2))
+plot(fit.cv.lasso, main="Lasso")
+plot(fit.cv.ridge, main="Ridge")
+```
+
+The plot displays the mean cross-validated error in red with bars corresponding to standard errors. The
+leftmost dotted line in each plot corresponds to the $\lambda$ that minimizes the error (lambda.min in the fitted
+object); the dotted line to the right corresponds to the largest value of $\lambda$ such that the error is within one
+standard error from the minimum (fit.lasso$lambda.1se in the fitted object).
+The curves obtained depend on the choice of the error measure used in cross-validation. By default,
+cv.glmnet() uses the mean square error for linear regression and deviance for logistic regression. However,
+these can be changed to mean absolute error (for linear regression) or to AUC or classification error (for
+logistic regression) by setting the appropriate choice of the type.measure option (see ?cv.glmnet).
+
+Note that inside the object produced by cv.glmnet() there is a field called glmnet.fit which effectively
+stores what would have been created by using glmnet(). This is where the regression coefficients for all values
+of $\lambda$ are stored.
+
+
+### Exercise 4.1 
+Using the clev.csv dataset (available on Learn):
+• Set the random seed to 1 and create 10 cross-validation folds.
+```{r}
+library(caret)
+
+clev.dt <- fread("data/clev.csv")
+
+set.seed(97696)                                 
+# The answers will differ but setting the seed to 1 all the time just isn't a good idea. 
+# Try running these with different seed values.
+
+folds <- createFolds(clev.dt$heart.disease, k=10)
+```
+
+• Model the occurrence of heart disease in each of the training folds using only age, sex, blood pressure and number of vessels as predictors (hint: see Lab 3).
+```{r}
+## function from Lab 3
+glm.cv <- function(formula, data, folds) {
+ regr.cv <- NULL
+ for (fold in 1:length(folds)) {
+ regr.cv[[fold]] <- glm(formula, data=data[-folds[[fold]],],
+ family="binomial")
+ }
+ return(regr.cv)
+}
+
+
+lr.cv <- glm.cv(heart.disease ~ age + sex + blood.pressure + num.vessels,
+ data=clev.dt, folds)
+```
+
+• Predict the outcomes for observations in the test folds (hint: see Lab 3). Report the mean
+cross-validated AUC for the test data (answer: 0.796).
+```{r}
+## function from Lab 3
+predict.cv <- function(regr.cv, data, outcome, folds) {
+ pred.cv <- NULL
+ for (fold in 1:length(folds)) {
+ test.idx <- folds[[fold]]
+ pred.cv[[fold]] <- data.frame(obs=outcome[test.idx],
+ pred=predict(regr.cv[[fold]], newdata=data,
+ type="response")[test.idx])
+ }
+ return(pred.cv)
+ }
+pred.lr.cv <- predict.cv(lr.cv, clev.dt, clev.dt$heart.disease, folds)
+
+
+library(pROC)
+auc.lr.cv <- numeric(length(folds))
+for (fold in 1:length(folds)) {
+ auc.lr.cv[fold] <- roc(obs ~ pred, data=pred.lr.cv[[fold]])$auc
+ }
+round(mean(auc.lr.cv), 3)
+```
+
+• In each training fold fit a ridge regression model using the same set of predictors and make a
+prediction of the outcomes on the test sets when using the optimal $\lambda_{min}$ found within each fold.
+Report the mean cross-validated AUC for the test data (answer: 0.797).
+```{r}
+library(glmnet)
+y.clev.dt <- clev.dt$heart.disease
+x.clev.dt <- prepare.glmnet(clev.dt, ~ age + sex + blood.pressure + num.vessels)
+ridge.cv <- pred.ridge.cv <- NULL
+for (fold in 1:length(folds)) {
+ test.idx <- folds[[fold]]
+ ridge.cv[[fold]] <- cv.glmnet(x.clev.dt[-test.idx, ], y.clev.dt[-test.idx],
+ family="binomial", alpha=0)
+ lambda.min <- ridge.cv[[fold]]$lambda.min
+ pred.ridge.cv[[fold]] <- data.frame(obs=y.clev.dt[test.idx],
+ pred=predict(ridge.cv[[fold]],
+ newx=x.clev.dt[test.idx, ],
+ type="response",
+ s=lambda.min)[, 1])
+ }
+auc.ridge.cv <- numeric(length(folds))
+for (fold in 1:length(folds)) {
+ auc.ridge.cv[fold] <- roc(obs ~ pred, data=pred.ridge.cv[[fold]])$auc
+ }
+round(mean(auc.ridge.cv), 3)
+```
+
+• Looking at the models fitted on the first cross-validation fold, compare the coefficients of the
+predictors from ridge regression to those from the unpenalised model. Which predictor was penalised
+least, and which was the most penalised?
+```{r}
+lr.coefs <- coef(lr.cv[[1]])[-1] # ignore the intercept
+lambda.idx <- which(ridge.cv[[1]]$lambda == ridge.cv[[1]]$lambda.min)
+ridge.coefs <- ridge.cv[[1]]$glmnet.fit$beta[, lambda.idx]
+round(data.frame(lr.coefs, ridge.coefs, ratio=ridge.coefs/lr.coefs), 3)
+```
+By taking a ratio of the ridge coefficients and the logistic regression coefficients, we see that the number of vessels was the most penalized variable, while age was the least penalised.
+
+• Build a lasso model using all available predictors apart from “chest.pain” (and the outcome!)
+following the same cross-validation approach as before. Report the mean cross-validated AUC for
+the test data (answer: 0.885).
+```{r}
+x.clev.dt2 <- prepare.glmnet(clev.dt, ~ . - chest.pain - heart.disease)
+lasso.cv <- pred.lasso.cv <- NULL
+for (fold in 1:length(folds)) {
+ test.idx <- folds[[fold]]
+ lasso.cv[[fold]] <- cv.glmnet(x.clev.dt2[-test.idx, ], y.clev.dt[-test.idx],
+ family="binomial", alpha=1)
+ lambda.min <- lasso.cv[[fold]]$lambda.min
+ pred.lasso.cv[[fold]] <- data.frame(obs=y.clev.dt[test.idx],
+ pred=predict(lasso.cv[[fold]],
+ newx=x.clev.dt2[test.idx, ],
+ type="response",
+ s=lambda.min)[, 1])
+ }
+auc.lasso.cv <- numeric(length(folds))
+for (fold in 1:length(folds)) {
+ auc.lasso.cv[fold] <- roc(obs ~ pred, data=pred.lasso.cv[[fold]])$auc
+ }
+round(mean(auc.lasso.cv), 3)
+```
+
+• Find which predictors are retained at the optimal $\lambda_{min}$ in the first cross-validation fold and their
+number (answer: 11).
+```{r}
+lambda.idx <- which(lasso.cv[[1]]$lambda == lasso.cv[[1]]$lambda.min)
+lasso.coefs <- lasso.cv[[1]]$glmnet.fit$beta[, lambda.idx]
+lasso.coefs[abs(lasso.coefs) > 0] # set of nonzero coefficients
+
+sum(abs(lasso.coefs) > 0) # number of nonzero coefficients
+```
