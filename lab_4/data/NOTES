@@ -1,0 +1,73 @@
+scr.csv: created from Chronic_Kidney_Disease, adding sex and ethnic from
+         binomial distributions (p=0.5 for sex, p=0.2 for ethnic)
+
+birthweight.txt: created from babies.data: height: converted to cm, weight
+          to kgs, parity to first.born
+
+longegfr[12].csv: created by splitting data.sim.ibm of package lmenssp,
+          rounding age and follow-up time, transforming log.egfr to egfr,
+          and removing egfr > 175. Changed some values so that there are
+          patients with average eGFR < 15.
+
+chdagesex.csv: inspired by chdage.dat but created as follows:
+          set.seed(1)
+          chdnew <- data.frame(AGE=sample(25:80, 500, TRUE),
+                               SEX=rbinom(500, 1, 0.5))
+          logit.chd <- -7.31 + 0.031 * chdnew$AGE + 1.78 * chdnew$SEX +
+                        0.035 * (chdnew$AGE - 100) * chdnew$SEX + rnorm(500)
+          prob.chd <- exp(logit.chd) / (1 + exp(logit.chd))
+          chdnew$CHD <- rbinom(500, 1, prob.chd) 
+
+drink.csv: derived from bupa.data and bupa.names
+
+clev.csv: added names from processed.cleveland.data
+
+hemophilia.csv: hemophilia dataset from package rrcov
+
+esoph.csv: derived from builtin dataset esoph
+
+zprostate.csv: derived from zprostate from package bestglm
+
+support.csv: derived from support.sav (http://biostat.mc.vanderbilt.edu/wiki/Main/DataSets)
+
+nki.csv: derived from nki70 from package penalized
+
+wdbc.csv: derived from wdbc.data and wdbc.names
+wdbc2.csv: derived from wdbc by removing the .worst variables and swapping some diagnosis labels
+
+birthwt.csv: derived from birthwt from package MASS
+
+hepcidin.csv: derived from http://datadryad.org/resource/doi:10.5061/dryad.br52k
+
+GDM.raw.txt, GDM.test.txt: derived from http://datadryad.org/resource/doi:10.5061/dryad.kq0k2
+GDM.study2.txt: derived by running a GWAS using data from GDM.test.txt
+
+hdl.gwas.csv, ldl.gaws.csv: derived from http://datadryad.org/resource/doi:10.5061/dryad.6b65r
+
+chrom21.csv: derived from http://www.datadryad.org/resource/doi:10.5061/dryad.hc445
+
+amass.txt: derived from /opt/shared/admix/sarcoidosis/indrani27Jul09/noX/data
+
+urate-gwas.txt, ldpred.txt: from the ~/projects/ldpred
+
+dpt.txt: derived from /opt/shared/genome/scores/sourcedata/ega_public/dupuytren_egad115
+dpt2.txt: derived from dpt, with odds-ratio column replaced with log odds-ratio (beta)
+
+batch1.csv, batch2.csv: created
+
+lipids.txt: derived from lipidomics.txt with rows reshuffled and some lipid
+ names changed, and the addition of a column of standard errors computed
+ using the formula:
+     z.score = qnorm(1 - p.value / 2) = beta / SE
+     SE = beta / z.score
+     se <- with(lipids, abs(log(oddsratio)) / (qnorm(1 - p.value / 2)))
+ p-values can be recomputed using the following formula
+     pnew <- with(lipids, pnorm(abs(log(oddsratio)) / se, lower.tail=FALSE) * 2
+
+icmt.csv: derived from https://datadryad.org/resource/doi:10.5061/dryad.hh3j7
+
+das.txt: derived from /opt/working/braggs/BIOL_matura_BIOL.txt
+
+OPN_study*.txt: derived from summary statistics from olink and summit used in genoscores
+
+MultiMeta_*.txt: derived from files in the MultiMeta package

@@ -30,7 +30,7 @@ Examining all these values is impractical, a good way of visualizing the strengt
 ```{r}
 library(corrplot)
 
-corrplot(cor.cancer)
+corrplot(cor.cancer, )
 ```
 
 
@@ -266,7 +266,6 @@ Now we are finally ready to fit the first regularised model. By default, the fun
 regression with lasso penalty. To change it to ridge regression, set the alpha option to 0.
 ```{r}
 library(glmnet)
-
 fit.lasso <- glmnet(xdiab01.dt, ydiab01.dt) # same as setting alpha=1
 fit.ridge <- glmnet(xdiab01.dt, ydiab01.dt, alpha=0)
 ```
@@ -288,6 +287,7 @@ The model coefficients depend on the choice of $\lambda$. They can be found in t
 beta (for predictors) of the fitted objects, while the value of the corresponding penalty factor is stored in the
 lambda field. Assuming that we were interested in the 10-th value of $\lambda$, we could retrieve the corresponding
 model coefficients by subsetting.
+
 ```{r}
 idx <- 10
 lambda10 <- fit.lasso$lambda[idx]

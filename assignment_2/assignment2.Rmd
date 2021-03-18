@@ -6,7 +6,11 @@ output:
 ---
 
 ```{r setup, include=FALSE}
+rm(list = ls())
 knitr::opts_chunk$set(echo = TRUE)
+library(caret)
+library(data.table)
+library(glmnet)
 ```
 
 # Assignment 2
@@ -32,6 +36,29 @@ Note: There is no need to use the prepare.glmnet() function from lab 4, using as
 
 ```{r}
 # Enter code here.
+set.seed(984065)
+wdbc2.dt <- fread("data/wdbc2.csv")
+wdbc2.dt$diagnosis <- ifelse(wdbc2.dt$diagnosis=='malignant',1,0)
+
+ind <- createDataPartition(wdbc2.dt$diagnosis, p=0.7, list=FALSE)
+data.train <- wdbc2.dt[ind,]
+data.test <- wdbc2.dt[-ind,]
+# table(wdbc2.dt$diagnosis)[1] / (table(wdbc2.dt$diagnosis)[1] + table(wdbc2.dt$diagnosis)[2])
+# table(data1.train$diagnosis)[1] / (table(data1.train$diagnosis)[1] + table(data1.train$diagnosis)[2])
+# table(data1.test$diagnosis)[1] / (table(data1.test$diagnosis)[1] + table(data1.test$diagnosis)[2])
+
+X.train <- data.train[, !c("diagnosis"), with=FALSE]
+X.test  <- data.test [, !c("diagnosis"), with=FALSE]
+y.train <- data.train[, c("diagnosis"), with=FALSE]
+y.test  <- data.test [, c("diagnosis"), with=FALSE]
+
+
+fit.cv.lasso <- cv.glmnet(as.matrix(X.train), as.matrix(y.train))
+fit.cv.ridge <- cv.glmnet(as.matrix(X.train), as.matrix(y.train), alpha=0)
+par(mfrow=c(1,2), mar=c(4,4,5,2))
+plot(fit.cv.lasso, main="Lasso")
+plot(fit.cv.ridge, main="Ridge")
+
 ```
 
 
