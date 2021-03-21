@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(caret)
 library(data.table)
 library(glmnet)
+library(MASS)
 ```
 
 # Assignment 2
@@ -54,6 +55,9 @@ X.test  <- data.test [, !c("diagnosis"), with=FALSE]
 y.train <- data.train[,  c("diagnosis"), with=FALSE]
 y.test  <- data.test [,  c("diagnosis"), with=FALSE]
 
+data.train <- cbind(X.train,y.train) 
+data.test  <- cbind(X.test,y.test) 
+
 fit.cv.lasso <- cv.glmnet(as.matrix(X.train), as.matrix(y.train), family='binomial', type.measure = c('auc'))
 fit.cv.ridge <- cv.glmnet(as.matrix(X.train), as.matrix(y.train), family='binomial', type.measure = c('auc'), alpha=0)
 par(mfrow=c(1,2), mar=c(4,4,5,2))
@@ -94,11 +98,11 @@ ridge.auc.1se    <- round(fit.cv.ridge$cvm[ridge.1se.pos],3)
 
 model.lasso.row  <- c(lasso.model, lasso.lambda.min, lasso.model.min, lasso.auc.min, lasso.lambda.1se, lasso.model.1se, lasso.auc.1se)
 model.ridge.row  <- c(ridge.model, ridge.lambda.min, ridge.model.min, ridge.auc.min, ridge.lambda.1se, ridge.model.1se, ridge.auc.1se)
-models.results   <- as.data.table(rbind(model.lasso.row, model.ridge.row))
+results.train    <- as.data.table(rbind(model.lasso.row, model.ridge.row))
 cols             <- c('model', 'lambda.min', 'variables.min', 'auc.min', 'lambda.1se', 'variables.1se', 'auc.1se')
-setnames(models.results, cols)
+setnames(results.train, cols)
 
-models.results
+results.train
 ```
 
 
@@ -107,8 +111,11 @@ models.results
 Perform both backward (we’ll later refer to this as model B) and forward (model S) stepwise selection on the same training set derived in problem 1.a. Report the variables selected and their standardized regression coefficients in decreasing order of the absolute value of their standardized regression coefficient. Discuss the results and how the different variables entering or leaving the model influenced the final result. 
 
 ```{r 1.c}
+full.model <- lm(as.matrix(y.train) ~ as.matrix(X.train)) 
+null.model <- lm(as.matrix(y.train) ~ 1)
 
-
+modelB <- stepAIC(full.model, direction="back")n
+modelS <- stepAIC(null.model, scope=list(upper=full.model), direction="forward")
 ```
 
 
