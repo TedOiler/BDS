@@ -149,10 +149,26 @@ Use the four models to predict the outcome for the observations in the test set 
 
 ```{r}
 # Enter code here.
-p1 <- predict(modelB, newdata=data.test)
-p2 <- predict(modelS, newdata=data.test)
-p3 <- predict.glmnet(fit.cv.lasso, data.test, s=lasso.lambda.min)
-p4 <- predict.glmnet(fit.cv.ridge, data.test, s=ridge.lambda.min)
+modelB.pred <- predict(modelB, newdata=data.test, type='response')
+modelS.pred <- predict(modelS, newdata=data.test, type='response')
+lasso.pred  <- predict(fit.cv.lasso, newx=as.matrix(X.test), s=lasso.lambda.1se, type='response')
+ridge.pred  <- predict(fit.cv.ridge, newx=as.matrix(X.test), s=ridge.lambda.1se, type='response')
+
+roc.modelB <- roc(data.test$diagnosis, modelB.pred , plot=TRUE, col='blue4')
+roc.modelS <- roc(data.test$diagnosis, modelS.pred , plot=TRUE, col='red4', add=TRUE)
+roc.lasso  <- roc(data.test$diagnosis, lasso.pred  , plot=TRUE, col='orange4', add=TRUE)
+roc.ridge  <- roc(data.test$diagnosis, ridge.pred  , plot=TRUE, col='green4', add=TRUE)
+legend(x = 'topright', legend = c('ModelB', 'ModelS', 'Lasso', 'Ridge'), 
+        col=c('blue4', 'red4', 'orange4', 'green4'), lwd=2)
+
+row1 <- c('lasso' , signif(roc.lasso$auc,4), signif(lasso.auc.1se,4))
+row2 <- c('ridge' , signif(roc.ridge$auc,4), signif(ridge.auc.1se,4))
+row3 <- c('modelB', signif(roc.modelB$auc,4), signif(auc.modelB$auc,4))
+row4 <- c('modelS', signif(roc.modelS$auc,4), signif(auc.modelS$auc,4))
+results.final <- as.data.table(rbind(row1,row2,row3,row4))
+cols <- c('model', 'AUC.test', 'AUC.train')
+setnames(results.final, cols)
+results.final[order(-AUC.test),]
 
 ```
 
