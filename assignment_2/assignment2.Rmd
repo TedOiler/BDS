@@ -34,7 +34,7 @@ File wdbc2.csv (available from the accompanying zip folder on Learn) refers to a
 Using package caret, create a data partition so that the training set contains 70% of the observations (set the random seed to 984065 beforehand). Fit both a ridge regression model and a lasso model which uses cross-validation on the training set to diagnose the type of tumour from the 30 biomarkers. Then use a plot to help identify the penalty parameter $\lambda$ that maximizes the AUC.
 Note: There is no need to use the prepare.glmnet() function from lab 4, using as.matrix() with the required columns is sufficient.
 
-```{r}
+```{r 1.a}
 # Enter code here.
 set.seed(984065)
 wdbc2.dt <- fread("data/wdbc2.csv")
@@ -43,22 +43,22 @@ wdbc2.dt$diagnosis <- ifelse(wdbc2.dt$diagnosis=='malignant',1,0)
 ind <- createDataPartition(wdbc2.dt$diagnosis, p=0.7, list=FALSE)
 data.train <- wdbc2.dt[ind,]
 data.test <- wdbc2.dt[-ind,]
+
+# check that the split is actually 70-30
 # table(wdbc2.dt$diagnosis)[1] / (table(wdbc2.dt$diagnosis)[1] + table(wdbc2.dt$diagnosis)[2])
 # table(data1.train$diagnosis)[1] / (table(data1.train$diagnosis)[1] + table(data1.train$diagnosis)[2])
 # table(data1.test$diagnosis)[1] / (table(data1.test$diagnosis)[1] + table(data1.test$diagnosis)[2])
 
 X.train <- data.train[, !c("diagnosis"), with=FALSE]
 X.test  <- data.test [, !c("diagnosis"), with=FALSE]
-y.train <- data.train[, c("diagnosis"), with=FALSE]
-y.test  <- data.test [, c("diagnosis"), with=FALSE]
+y.train <- data.train[,  c("diagnosis"), with=FALSE]
+y.test  <- data.test [,  c("diagnosis"), with=FALSE]
 
-
-fit.cv.lasso <- cv.glmnet(as.matrix(X.train), as.matrix(y.train))
-fit.cv.ridge <- cv.glmnet(as.matrix(X.train), as.matrix(y.train), alpha=0)
+fit.cv.lasso <- cv.glmnet(as.matrix(X.train), as.matrix(y.train), family='binomial', type.measure = c('auc'))
+fit.cv.ridge <- cv.glmnet(as.matrix(X.train), as.matrix(y.train), family='binomial', type.measure = c('auc'), alpha=0)
 par(mfrow=c(1,2), mar=c(4,4,5,2))
 plot(fit.cv.lasso, main="Lasso")
 plot(fit.cv.ridge, main="Ridge")
-
 ```
 
 
@@ -70,8 +70,35 @@ Create a data table that for each value of 'lambda.min' and 'lambda.1se' for eac
 * the corresponding model size. 
 Use 3 significant digits for floating point values and comment on these results. Hint: The AUC values are stored in the field called 'cvm'. 
 
-```{r}
+```{r 1.b}
 # Enter code here.
+lasso.min.pos    <- which(fit.cv.lasso$lambda==fit.cv.lasso$lambda.min)
+lasso.1se.pos    <- which(fit.cv.lasso$lambda==fit.cv.lasso$lambda.1se)
+lasso.model      <- 'lasso'
+lasso.lambda.min <- round(fit.cv.lasso$lambda.min,3)
+lasso.lambda.1se <- round(fit.cv.lasso$lambda.1se,3)
+lasso.model.min  <- round(fit.cv.lasso$nzero[lasso.min.pos],3)
+lasso.model.1se  <- round(fit.cv.lasso$nzero[lasso.1se.pos],3)
+lasso.auc.min    <- round(fit.cv.lasso$cvm[lasso.min.pos],3)
+lasso.auc.1se    <- round(fit.cv.lasso$cvm[lasso.1se.pos],3)
+
+ridge.min.pos    <- which(fit.cv.ridge$lambda==fit.cv.ridge$lambda.min)
+ridge.1se.pos    <- which(fit.cv.ridge$lambda==fit.cv.ridge$lambda.1se)
+ridge.model      <- 'ridge'
+ridge.lambda.min <- round(fit.cv.ridge$lambda.min,3)
+ridge.lambda.1se <- round(fit.cv.ridge$lambda.1se,3)
+ridge.model.min  <- round(fit.cv.ridge$nzero[ridge.min.pos],3)
+ridge.model.1se  <- round(fit.cv.ridge$nzero[ridge.1se.pos],3)
+ridge.auc.min    <- round(fit.cv.ridge$cvm[ridge.min.pos],3)
+ridge.auc.1se    <- round(fit.cv.ridge$cvm[ridge.1se.pos],3)
+
+model.lasso.row  <- c(lasso.model, lasso.lambda.min, lasso.model.min, lasso.auc.min, lasso.lambda.1se, lasso.model.1se, lasso.auc.1se)
+model.ridge.row  <- c(ridge.model, ridge.lambda.min, ridge.model.min, ridge.auc.min, ridge.lambda.1se, ridge.model.1se, ridge.auc.1se)
+models.results   <- as.data.table(rbind(model.lasso.row, model.ridge.row))
+cols             <- c('model', 'lambda.min', 'variables.min', 'auc.min', 'lambda.1se', 'variables.1se', 'auc.1se')
+setnames(models.results, cols)
+
+models.results
 ```
 
 
@@ -79,8 +106,9 @@ Use 3 significant digits for floating point values and comment on these results.
 
 Perform both backward (we’ll later refer to this as model B) and forward (model S) stepwise selection on the same training set derived in problem 1.a. Report the variables selected and their standardized regression coefficients in decreasing order of the absolute value of their standardized regression coefficient. Discuss the results and how the different variables entering or leaving the model influenced the final result. 
 
-```{r}
-# Enter code here.
+```{r 1.c}
+
+
 ```
 
 
