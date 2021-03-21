@@ -12,6 +12,7 @@ library(caret)
 library(data.table)
 library(glmnet)
 library(MASS)
+library(pROC)
 ```
 
 # Assignment 2
@@ -35,7 +36,7 @@ File wdbc2.csv (available from the accompanying zip folder on Learn) refers to a
 Using package caret, create a data partition so that the training set contains 70% of the observations (set the random seed to 984065 beforehand). Fit both a ridge regression model and a lasso model which uses cross-validation on the training set to diagnose the type of tumour from the 30 biomarkers. Then use a plot to help identify the penalty parameter $\lambda$ that maximizes the AUC.
 Note: There is no need to use the prepare.glmnet() function from lab 4, using as.matrix() with the required columns is sufficient.
 
-```{r 1.a}
+```{r}
 # Enter code here.
 set.seed(984065)
 wdbc2.dt <- fread("data/wdbc2.csv")
@@ -50,13 +51,10 @@ data.test <- wdbc2.dt[-ind,]
 # table(data1.train$diagnosis)[1] / (table(data1.train$diagnosis)[1] + table(data1.train$diagnosis)[2])
 # table(data1.test$diagnosis)[1] / (table(data1.test$diagnosis)[1] + table(data1.test$diagnosis)[2])
 
-X.train <- data.train[, !c("diagnosis"), with=FALSE]
-X.test  <- data.test [, !c("diagnosis"), with=FALSE]
+X.train <- data.train[, !c("diagnosis","id"), with=FALSE]
+X.test  <- data.test [, !c("diagnosis","id"), with=FALSE]
 y.train <- data.train[,  c("diagnosis"), with=FALSE]
 y.test  <- data.test [,  c("diagnosis"), with=FALSE]
-
-data.train <- cbind(X.train,y.train) 
-data.test  <- cbind(X.test,y.test) 
 
 fit.cv.lasso <- cv.glmnet(as.matrix(X.train), as.matrix(y.train), family='binomial', type.measure = c('auc'))
 fit.cv.ridge <- cv.glmnet(as.matrix(X.train), as.matrix(y.train), family='binomial', type.measure = c('auc'), alpha=0)
@@ -74,7 +72,7 @@ Create a data table that for each value of 'lambda.min' and 'lambda.1se' for eac
 * the corresponding model size. 
 Use 3 significant digits for floating point values and comment on these results. Hint: The AUC values are stored in the field called 'cvm'. 
 
-```{r 1.b}
+```{r}
 # Enter code here.
 lasso.min.pos    <- which(fit.cv.lasso$lambda==fit.cv.lasso$lambda.min)
 lasso.1se.pos    <- which(fit.cv.lasso$lambda==fit.cv.lasso$lambda.1se)
@@ -110,14 +108,15 @@ results.train
 
 Perform both backward (we’ll later refer to this as model B) and forward (model S) stepwise selection on the same training set derived in problem 1.a. Report the variables selected and their standardized regression coefficients in decreasing order of the absolute value of their standardized regression coefficient. Discuss the results and how the different variables entering or leaving the model influenced the final result. 
 
-```{r 1.c}
-full.model <- lm(as.matrix(y.train) ~ as.matrix(X.train)) 
-null.model <- lm(as.matrix(y.train) ~ 1)
+```{r}
+full.model <- suppressWarnings(glm(data.train$diagnosis ~ . , data=data.train, family='binomial'))
+modelB     <- suppressWarnings(stepAIC(full.model, direction="back", trace=FALSE))
+null.model <- suppressWarnings(glm(data.train$diagnosis ~ 1 , data=data.train, family='binomial'))
+modelS     <- suppressWarnings(stepAIC(null.model, scope=list(upper=full.model), direction="forward", trace=FALSE))
 
-modelB <- stepAIC(full.model, direction="back")n
-modelS <- stepAIC(null.model, scope=list(upper=full.model), direction="forward")
+modelB
+modelS
 ```
-
 
 ### Problem 1.d (3 points)
 
@@ -125,6 +124,9 @@ Compare the goodness of fit of model B and model S in an appropriate way.
 
 ```{r}
 # Enter code here.
+# Chi-square goodness of fit tests and deviance
+signif(pchisq(modelB$null.deviance - modelB$deviance, df=12, lower.tail=FALSE),2)
+signif(pchisq(modelS$null.deviance - modelS$deviance, df=14, lower.tail=FALSE),2)
 ```
 
 
@@ -134,15 +136,24 @@ Compute the training AUC for model B and model S.
 
 ```{r}
 # Enter code here.
+auc.modelB <- roc(data.train$diagnosis, modelB$fitted.values)
+auc.modelS <- roc(data.train$diagnosis, modelS$fitted.values)
+auc.modelB$auc
+auc.modelS$auc
 ```
 
 
 ### Problem 1.f (6 points)
 
-Use the four models to predict the outcome for the observations in the test set (use the lambda at 1 standard error for the penalised models). Plot the ROC curves of these models (on the sameplot, using different colours) and report their test AUCs. Compare the training AUCs obtained in problems 1.b and 1.e with the test AUCs and discuss the fit of the different models.
+Use the four models to predict the outcome for the observations in the test set (use the lambda at 1 standard error for the penalised models). Plot the ROC curves of these models (on the same plot, using different colours) and report their test AUCs. Compare the training AUCs obtained in problems 1.b and 1.e with the test AUCs and discuss the fit of the different models.
 
 ```{r}
 # Enter code here.
+p1 <- predict(modelB, newdata=data.test)
+p2 <- predict(modelS, newdata=data.test)
+p3 <- predict.glmnet(fit.cv.lasso, data.test, s=lasso.lambda.min)
+p4 <- predict.glmnet(fit.cv.ridge, data.test, s=ridge.lambda.min)
+
 ```
 
 
