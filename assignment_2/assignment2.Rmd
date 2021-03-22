@@ -14,6 +14,7 @@ library(glmnet)
 library(MASS)
 library(pROC)
 library(tidyr)
+library(corrplot)
 ```
 
 # Assignment 2
@@ -235,14 +236,13 @@ crude.folds <- NULL
 for (fold in 1:length(folds)) {
   gdm.dt.train <- gdm.dt[-folds[[fold]]]
   crude <- NULL
-  for (snp in 3:ncol(gdm.dt.train)) { # skip the outcome column
+  for (snp in 3:ncol(gdm.dt.train)) { # skip the outcome column;
     crude <- rbind(crude,
     univ.glm.test(gdm.dt.train[[snp]], gdm.dt.train[[2]]))
     }
   crude <- cbind(snp=colnames(gdm.dt)[-1], crude)
   crude.folds[[fold]] <- crude
 }
-
 ```
 
 
@@ -302,6 +302,22 @@ Compute the matrix of correlations between the gene expression variables, and di
 
 ```{r}
 # Enter code here.
+nki.dt <- fread("data/nki.csv")
+numcols <- sapply(nki.dt, is.numeric) 
+cor.nki <- nki.dt[, ..numcols] %>% cor(use="pairwise.complete")
+cor.nki <- cor.nki*(abs(cor.nki)>0.8)
+cor.nki <- cor.nki[-which(rowSums(cor.nki)==1),-which(colSums(cor.nki)==1)]
+corrplot(cor.nki,
+         order="hclust",
+         addrect=2,
+         method="square",
+         diag=FALSE,
+         tl.col="black",
+         tl.cex = 0.9,
+         outline=TRUE,
+         title="Correlation matrix",
+         cl.lim=c(-1, 1),
+         mar=c(0,0,1.5,0))
 ```
 
 
