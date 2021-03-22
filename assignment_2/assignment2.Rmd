@@ -13,6 +13,7 @@ library(data.table)
 library(glmnet)
 library(MASS)
 library(pROC)
+library(tidyr)
 ```
 
 # Assignment 2
@@ -169,7 +170,6 @@ results.final <- as.data.table(rbind(row1,row2,row3,row4))
 cols <- c('model', 'AUC.test', 'AUC.train')
 setnames(results.final, cols)
 results.final[order(-AUC.test),]
-
 ```
 
 
@@ -183,8 +183,25 @@ File GDM.raw.txt (available from the accompanying zip folder on Learn) contains 
 
 Read file GDM.raw.txt into a data table named gdm.dt. Impute missing values in gdm.dt according to SNP-wise median allele count.
 
+```{r Single imputation function}
+#' This is a function that takes as impute a column of a data.table and imputes 
+#' the NAs with its mean / mode if the vector is numeric or categorical respectively.
+#' @param x A vector of numeric or categorical values for which the NAs will be imputed.
+impute.to.median <- function(x) {
+    if (all(na.omit(x) %in% 0L:2L)){
+      x[is.na(x)] = median(x, na.rm=TRUE)
+    } 
+    return(x)
+  }
+```
+
+
 ```{r}
 # Enter code here.
+gdm.dt <- fread("data/GDM.raw.txt")
+numcols <- colnames(gdm.dt)
+gdm.dt %>% .[, (numcols) := lapply(.SD, impute.to.median), .SDcols = numcols]
+folds <- createFolds(gdm.dt$pheno, k=5)
 ```
 
 
@@ -193,7 +210,18 @@ Read file GDM.raw.txt into a data table named gdm.dt. Impute missing values in g
 Write function univ.glm.test <- function(x, y, order = FALSE) where x is a data table of SNPs, y is a binary outcome vector, and order is a boolean. The function should fit a logistic regression model for each SNP in x, and return a data table containing SNP names, regression coefficients, odds ratios, standard errors and p-values. If order is set to TRUE, the output data table should be ordered by increasing p-value.
 
 ```{r}
-# Enter code here.
+univ.glm.test <- function(x, y, order=FALSE) {
+  # stopifnot(class(x)[1] == 'data table')
+  stopifnot(y %in% 0:1)
+  stopifnot(length(x) == length(y))
+  regr <- glm(y ~ x, family='binomial')
+  ## remove the row corresponding to the intercept and the column containing
+  ## the t-value, then convert to a dataframe
+  output <- data.table(coef(summary(regr)))[-1, -3]
+  ## assign better column names
+  colnames(output) <- c("beta", "std.error", "p.value")
+  if(order){return(output[order(-p.value),])} else{return(output)}
+}
 ```
 
 
@@ -203,6 +231,18 @@ Using function univ.glm.test(), run an association study for all the SNPs in gdm
 
 ```{r}
 # Enter code here.
+crude.folds <- NULL
+for (fold in 1:length(folds)) {
+  gdm.dt.train <- gdm.dt[-folds[[fold]]]
+  crude <- NULL
+  for (snp in 3:ncol(gdm.dt.train)) { # skip the outcome column
+    crude <- rbind(crude,
+    univ.glm.test(gdm.dt.train[[snp]], gdm.dt.train[[2]]))
+    }
+  crude <- cbind(snp=colnames(gdm.dt)[-1], crude)
+  crude.folds[[fold]] <- crude
+}
+
 ```
 
 
