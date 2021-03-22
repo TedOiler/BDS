@@ -15,6 +15,7 @@ library(MASS)
 library(pROC)
 library(tidyr)
 library(corrplot)
+library(factoextra)
 ```
 
 # Assignment 2
@@ -327,6 +328,17 @@ Run PCA (only over the columns containing gene expressions), in order to derive 
 
 ```{r}
 # Enter code here.
+nki.dt[,6]
+numcols[c('Event', 'Diam', 'LymphNodes', 'EstrogenReceptor', 'Grade', 'Age')] <- FALSE
+
+pca.vars <- prcomp(nki.dt[, ..numcols], center = T, scale = T)
+var.expl <- cumsum(pca.vars$sdev^2 / sum(pca.vars$sdev^2))
+plot(var.expl, type='l', col='blue4')
+abline(h=0.9511847, v=42, lty=2)
+
+fviz_pca_ind(pca.vars, geom='point',
+             habillage = nki.dt$Event,
+             addEllipses = T)
 ```
 
 
