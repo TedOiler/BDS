@@ -328,17 +328,47 @@ Run PCA (only over the columns containing gene expressions), in order to derive 
 
 ```{r}
 # Enter code here.
-nki.dt[,6]
 numcols[c('Event', 'Diam', 'LymphNodes', 'EstrogenReceptor', 'Grade', 'Age')] <- FALSE
 
 pca.vars <- prcomp(nki.dt[, ..numcols], center = T, scale = T)
 var.expl <- cumsum(pca.vars$sdev^2 / sum(pca.vars$sdev^2))
+
+summary(pca.vars)
+# cumulative variance explained plot
 plot(var.expl, type='l', col='blue4')
 abline(h=0.9511847, v=42, lty=2)
 
+# scree plot
+screeplot(pca.vars, main="Scree plot", col='lightblue')
+
+# PCA plot
 fviz_pca_ind(pca.vars, geom='point',
              habillage = nki.dt$Event,
              addEllipses = T)
+
+# PCA biplot
+# fviz_pca_biplot(pca.vars, geom='point', repel = T)
+
+pca.embeddings.95 <- as.data.frame(pca.vars$x[,1:42])
+
+# all PCs are othogonal, checking that the correlation matrix is all white except autocorrelations.
+# res1 <- cor(pca.embeddings.95, method='pearson')
+# corrplot(res1, method= "color", order = "hclust", tl.pos = 'n')
+
+## Models
+# 
+# beta.Z <- as.matrix(lmodel$coefficients[2:123])
+# V <- as.matrix(crimeData.pca1$rotation)
+# beta.X <- V %*% beta.Z
+# beta.X
+data.embeded <- as.data.frame(cbind(nki.dt[,1],pca.embeddings.95))
+data.embeded.adj <- as.data.frame(cbind(nki.dt[,1], nki.dt[,4:6], pca.embeddings.95))
+
+model     <- glm(Event~., data=data.embeded, family='binomial')
+model.adj <- glm(Event~., data=data.embeded.adj, family='binomial')
+
+summary(model)
+summary(model.adj)
 ```
 
 
