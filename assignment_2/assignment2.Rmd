@@ -379,7 +379,6 @@ colnames(report.FTO) <- c("beta","std.error", "p.value", "odds ratio", "odds rat
 
 report <- rbind(report.3, report.4, report.FTO) 
 report[,3:7]
-
 ```
 
 ### Problem 2.f (4 points)
@@ -391,6 +390,38 @@ Add the three scores as columns to gdm.test (hint: use the same columnnames as b
 
 ```{r}
 # Enter code here.
+gdm.test <- fread("data/GDM.test.txt")
+X <- as.data.table(gdm.test[,4:ncol(gdm.test)])
+target <- gdm.test$pheno
+
+association.test <- data.table(univ.glm.test(x=X,y=target, ordering=TRUE), key=c('snp_full'))
+
+pk <- c('snp')
+setnames(association.test, "snp_full", "snp")
+association.test.ext <- merge(association.test,
+                              gdm.annot.dt,
+                              by=pk,
+                              all=TRUE)[order(snp)]
+
+association.test.ext
+
+snps.grs.3   <- association.test.ext[p.value < 1e-3]
+snps.grs.4   <- association.test.ext[p.value < 1e-4]
+snps.grs.FTO <- association.test.ext[gene == 'FTO']
+
+gdm.grs.3   <- gdm.test[, .SD, .SDcols = snps.grs.3$snp]
+gdm.grs.4   <- gdm.test[, .SD, .SDcols = snps.grs.4$snp]
+gdm.grs.FTO <- gdm.test[, .SD, .SDcols = snps.grs.FTO$snp]
+
+weighted.score.3   <- as.matrix(gdm.grs.3) %*% snps.grs.3$beta
+weighted.score.4   <- as.matrix(gdm.grs.4) %*% snps.grs.4$beta
+weighted.score.FTO <- as.matrix(gdm.grs.FTO) %*% snps.grs.FTO$beta
+
+gdm.test[,weighted.risk.3:=weighted.score.3]
+gdm.test[,weighted.risk.4:=weighted.score.4]
+gdm.test[,weighted.risk.FTO:=weighted.score.FTO]
+gdm.test
+
 ```
 
 ### Problem 2.g (4 points)
