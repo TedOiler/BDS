@@ -37,7 +37,7 @@ We start by reading file `chrom21.csv` (available on Learn), which contains 1500
 
 ```{r}
 library(data.table)
-chrom21 <- fread("data/chrom21.csv")
+chrom21 <- fread("chrom21.csv")
 ```
 
 Also genetic data can contain missing values, due to genotyping errors or poor quality reads that are discarded at the quality control step.
@@ -273,8 +273,8 @@ Files `OPN_sub_study1.txt` and `OPN_sub_study2.txt` contain a small subset of re
 
 ```{r}
 # Use fread() to load data. It does not convert strings to factors 
-gwas1 <- fread("data/OPN_sub_study1.txt") 
-gwas2 <- fread("data/OPN_sub_study2.txt") 
+gwas1 <- fread("OPN_sub_study1.txt") 
+gwas2 <- fread("OPN_sub_study2.txt") 
 ```
 
 We need to harmonize the two datasets: in this specific case it's enough to order them by chromosome and position, but we need to ensure that the SNP identifiers correspond.

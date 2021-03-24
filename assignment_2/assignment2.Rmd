@@ -3,11 +3,14 @@ title: "Assignment 2"
 output:
   pdf_document: default
   html_document: default
+editor_options: 
+  markdown: 
+    wrap: sentence
 ---
 
 ```{r setup, include=FALSE}
 rm(list = ls())
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo=TRUE)
 library(caret)
 library(data.table)
 library(glmnet)
@@ -15,28 +18,34 @@ library(MASS)
 library(pROC)
 library(tidyr)
 library(corrplot)
+library(RColorBrewer)
 library(factoextra)
 ```
 
 # Assignment 2
+
 ## Biomedical Data Science
+
 ### Due on Thursday 18th March 2020, 5:00pm
 
 The assignment is marked out of 100 points, and will contribute to 30% of your final mark.
-Please knit this document in PDF format and submit using the gradescope link on Learn. If you can't knit to PDF directly, knit it to word and you should be able to either convert to PDF or print it and scan to PDF using a scanning app on your phone. If you have any code that doesn't run you won't be able to knit the document so comment it as you might still get some grades for partial code. 
-Clear and reusable code will be rewarded so pay attention to indentation, choice of variable identifiers, comments, error checking, etc. 
-An initial code chunk is provided after each subquestion but create as many chunks as you feel is necessary to make a clear report. Add plain text explanations in between the chunks as and when required and any comments necessary within code chunks to make it easier to follow your code/reasoning.
-
-
+Please knit this document in PDF format and submit using the gradescope link on Learn.
+If you can't knit to PDF directly, knit it to word and you should be able to either convert to PDF or print it and scan to PDF using a scanning app on your phone.
+If you have any code that doesn't run you won't be able to knit the document so comment it as you might still get some grades for partial code.
+Clear and reusable code will be rewarded so pay attention to indentation, choice of variable identifiers, comments, error checking, etc.
+An initial code chunk is provided after each subquestion but create as many chunks as you feel is necessary to make a clear report.
+Add plain text explanations in between the chunks as and when required and any comments necessary within code chunks to make it easier to follow your code/reasoning.
 
 ## Problem 1 (27 points)
 
-File wdbc2.csv (available from the accompanying zip folder on Learn) refers to a study of breast cancer where the outcome of interest is the type of the tumour (benign or malignant, recorded in column “diagnosis”). The study collected 30 imaging biomarkers on 569 patients.
-
+File wdbc2.csv (available from the accompanying zip folder on Learn) refers to a study of breast cancer where the outcome of interest is the type of the tumour (benign or malignant, recorded in column "diagnosis").
+The study collected 30 imaging biomarkers on 569 patients.
 
 ### Problem 1.a (7 points)
 
-Using package caret, create a data partition so that the training set contains 70% of the observations (set the random seed to 984065 beforehand). Fit both a ridge regression model and a lasso model which uses cross-validation on the training set to diagnose the type of tumour from the 30 biomarkers. Then use a plot to help identify the penalty parameter $\lambda$ that maximizes the AUC.
+Using package caret, create a data partition so that the training set contains 70% of the observations (set the random seed to 984065 beforehand).
+Fit both a ridge regression model and a lasso model which uses cross-validation on the training set to diagnose the type of tumour from the 30 biomarkers.
+Then use a plot to help identify the penalty parameter $\lambda$ that maximizes the AUC.
 Note: There is no need to use the prepare.glmnet() function from lab 4, using as.matrix() with the required columns is sufficient.
 
 ```{r}
@@ -66,14 +75,11 @@ plot(fit.cv.lasso, main="Lasso")
 plot(fit.cv.ridge, main="Ridge")
 ```
 
-
-
 ### Problem 1.b (2 points)
 
-Create a data table that for each value of 'lambda.min' and 'lambda.1se' for each model fitted in problem 1.a reports:
-* the corresponding AUC,
-* the corresponding model size. 
-Use 3 significant digits for floating point values and comment on these results. Hint: The AUC values are stored in the field called 'cvm'. 
+Create a data table that for each value of 'lambda.min' and 'lambda.1se' for each model fitted in problem 1.a reports: \* the corresponding AUC, \* the corresponding model size.
+Use 3 significant digits for floating point values and comment on these results.
+Hint: The AUC values are stored in the field called 'cvm'.
 
 ```{r}
 # Enter code here.
@@ -106,10 +112,11 @@ setnames(results.train, cols)
 results.train
 ```
 
-
 ### Problem 1.c (7 points)
 
-Perform both backward (we’ll later refer to this as model B) and forward (model S) stepwise selection on the same training set derived in problem 1.a. Report the variables selected and their standardized regression coefficients in decreasing order of the absolute value of their standardized regression coefficient. Discuss the results and how the different variables entering or leaving the model influenced the final result. 
+Perform both backward (we'll later refer to this as model B) and forward (model S) stepwise selection on the same training set derived in problem 1.a.
+Report the variables selected and their standardized regression coefficients in decreasing order of the absolute value of their standardized regression coefficient.
+Discuss the results and how the different variables entering or leaving the model influenced the final result.
 
 ```{r}
 full.model <- suppressWarnings(glm(data.train$diagnosis ~ . , data=data.train, family='binomial'))
@@ -132,7 +139,6 @@ signif(pchisq(modelB$null.deviance - modelB$deviance, df=12, lower.tail=FALSE),2
 signif(pchisq(modelS$null.deviance - modelS$deviance, df=14, lower.tail=FALSE),2)
 ```
 
-
 ### Problem 1.e (2 points)
 
 Compute the training AUC for model B and model S.
@@ -145,10 +151,11 @@ auc.modelB$auc
 auc.modelS$auc
 ```
 
-
 ### Problem 1.f (6 points)
 
-Use the four models to predict the outcome for the observations in the test set (use the lambda at 1 standard error for the penalised models). Plot the ROC curves of these models (on the same plot, using different colours) and report their test AUCs. Compare the training AUCs obtained in problems 1.b and 1.e with the test AUCs and discuss the fit of the different models.
+Use the four models to predict the outcome for the observations in the test set (use the lambda at 1 standard error for the penalised models).
+Plot the ROC curves of these models (on the same plot, using different colours) and report their test AUCs.
+Compare the training AUCs obtained in problems 1.b and 1.e with the test AUCs and discuss the fit of the different models.
 
 ```{r}
 # Enter code here.
@@ -157,10 +164,10 @@ modelS.pred <- predict(modelS, newdata=data.test, type='response')
 lasso.pred  <- predict(fit.cv.lasso, newx=as.matrix(X.test), s=lasso.lambda.1se, type='response')
 ridge.pred  <- predict(fit.cv.ridge, newx=as.matrix(X.test), s=ridge.lambda.1se, type='response')
 
-roc.modelB <- roc(data.test$diagnosis, modelB.pred , plot=TRUE, col='blue4')
-roc.modelS <- roc(data.test$diagnosis, modelS.pred , plot=TRUE, col='red4', add=TRUE)
-roc.lasso  <- roc(data.test$diagnosis, lasso.pred  , plot=TRUE, col='orange4', add=TRUE)
-roc.ridge  <- roc(data.test$diagnosis, ridge.pred  , plot=TRUE, col='green4', add=TRUE)
+roc.modelB <- roc(data.test$diagnosis, modelB.pred , plot=TRUE, col='blue4', direction="<")
+roc.modelS <- roc(data.test$diagnosis, modelS.pred , plot=TRUE, col='red4', direction="<", add=TRUE, quite=TRUE)
+roc.lasso  <- roc(data.test$diagnosis, lasso.pred  , plot=TRUE, col='orange4', direction="<", add=TRUE, quite=TRUE)
+roc.ridge  <- roc(data.test$diagnosis, ridge.pred  , plot=TRUE, col='green4', direction="<", add=TRUE, quite=TRUE)
 legend(x = 'topright', legend = c('ModelB', 'ModelS', 'Lasso', 'Ridge'), 
         col=c('blue4', 'red4', 'orange4', 'green4'), lwd=2)
 
@@ -174,16 +181,17 @@ setnames(results.final, cols)
 results.final[order(-AUC.test),]
 ```
 
-
+\newpage
 
 ## Problem 2 (40 points)
 
-File GDM.raw.txt (available from the accompanying zip folder on Learn) contains 176 SNPs to be studied for association with incidence of gestational diabetes (a form of diabetes that is specific to pregnant women). SNP names are given in the form “rs1234_X” where “rs1234” is the official identifier (rsID), and “X” (one of A, C, G, T) is the reference allele.
-
+File GDM.raw.txt (available from the accompanying zip folder on Learn) contains 176 SNPs to be studied for association with incidence of gestational diabetes (a form of diabetes that is specific to pregnant women).
+SNP names are given in the form "rs1234_X" where "rs1234" is the official identifier (rsID), and "X" (one of A, C, G, T) is the reference allele.
 
 ### Problem 2.a (3 points)
 
-Read file GDM.raw.txt into a data table named gdm.dt. Impute missing values in gdm.dt according to SNP-wise median allele count.
+Read file GDM.raw.txt into a data table named gdm.dt.
+Impute missing values in gdm.dt according to SNP-wise median allele count.
 
 ```{r Single imputation function}
 #' This is a function that takes as impute a column of a data.table and imputes 
@@ -197,109 +205,113 @@ impute.to.median <- function(x) {
   }
 ```
 
-
 ```{r}
 # Enter code here.
 gdm.dt <- fread("data/GDM.raw.txt")
 numcols <- colnames(gdm.dt)
 gdm.dt %>% .[, (numcols) := lapply(.SD, impute.to.median), .SDcols = numcols]
-folds <- createFolds(gdm.dt$pheno, k=5)
 ```
-
 
 ### Problem 2.b (8 points)
 
-Write function univ.glm.test <- function(x, y, order = FALSE) where x is a data table of SNPs, y is a binary outcome vector, and order is a boolean. The function should fit a logistic regression model for each SNP in x, and return a data table containing SNP names, regression coefficients, odds ratios, standard errors and p-values. If order is set to TRUE, the output data table should be ordered by increasing p-value.
+Write function univ.glm.test <- function(x, y, order = FALSE) where x is a data table of SNPs, y is a binary outcome vector, and order is a boolean.
+The function should fit a logistic regression model for each SNP in x, and return a data table containing SNP names, regression coefficients, odds ratios, standard errors and p-values.
+If order is set to TRUE, the output data table should be ordered by increasing p-value.
 
 ```{r}
-univ.glm.test <- function(x, y, order=FALSE) {
-  # stopifnot(class(x)[1] == 'data table')
-  stopifnot(y %in% 0:1)
-  stopifnot(length(x) == length(y))
-  regr <- glm(y ~ x, family='binomial')
-  ## remove the row corresponding to the intercept and the column containing
-  ## the t-value, then convert to a dataframe
-  output <- data.table(coef(summary(regr)))[-1, -3]
-  ## assign better column names
-  colnames(output) <- c("beta", "std.error", "p.value")
-  if(order){return(output[order(-p.value),])} else{return(output)}
-}
+# run univariate tests of associations for all SNPs(columns of az) 
+univ.glm.test <- function(x, y, order=FALSE) { 
+  stopifnot(all(na.omit(y) %in% 0L:1L))
+  output <- NULL
+    for (i in 1:ncol(x)){
+      regr <- glm(y ~ x[[i]], family='binomial')
+      
+      data <- transpose(as.data.table(c(coef(summary(regr))[-1, -3])))
+      data <- cbind(data, exp(coef(regr)))
+      output <- rbind(output, data)
+    }
+  # assign better column names 
+    colnames(output) <- c("beta","std.error", "p.value", "odds ratio")
+    if(!order) {return(output)} else {return(output[order(output$"p.value"), ])}
+  }
 ```
-
 
 ### Problem 2.c (5 points)
 
-Using function univ.glm.test(), run an association study for all the SNPs in gdm.dt against having gestational diabetes (column “pheno”). For the SNP that is most strongly associated to increased risk of gestational diabetes and the one with most significant protective effect, report the summary statistics from the GWAS as well as the 95% and 99% confidence intervals on the odds ratio.
+Using function univ.glm.test(), run an association study for all the SNPs in gdm.dt against having gestational diabetes (column "pheno").
+For the SNP that is most strongly associated to increased risk of gestational diabetes and the one with most significant protective effect, report the summary statistics from the GWAS as well as the 95% and 99% confidence intervals on the odds ratio.
 
 ```{r}
 # Enter code here.
-crude.folds <- NULL
-for (fold in 1:length(folds)) {
-  gdm.dt.train <- gdm.dt[-folds[[fold]]]
-  crude <- NULL
-  for (snp in 3:ncol(gdm.dt.train)) { # skip the outcome column;
-    crude <- rbind(crude,
-    univ.glm.test(gdm.dt.train[[snp]], gdm.dt.train[[2]]))
-    }
-  crude <- cbind(snp=colnames(gdm.dt)[-1], crude)
-  crude.folds[[fold]] <- crude
-}
-```
 
+X <- as.data.table(gdm.dt[,4:ncol(gdm.dt)])
+target <- gdm.dt$pheno
+
+univ.glm.test(x=X,y=target, order=TRUE)
+```
 
 ### Problem 2.d (4points)
-
-Merge your GWAS results with the table of gene names provided in file GDM.annot.txt (available from the accompanying zip folder on Learn). For SNPs that have p-value $< 10^{-4}$ (hit SNPs) report SNP name, effect allele, chromosome number and corresponding gene name. Separately, report for each ‘hit SNP’ the names of the genes that are within a 1Mb window from the SNP position on the chromosome. Note: That’s genes that fall within +/- 1,000,000 positions using the ‘pos’ column in the dataset.
+  
+Merge your GWAS results with the table of gene names provided in file GDM.annot.txt (available from the accompanying zip folder on Learn).
+For SNPs that have p-value $< 10^{-4}$ (hit SNPs) report SNP name, effect allele, chromosome number and corresponding gene name.
+Separately, report for each 'hit SNP' the names of the genes that are within a 1Mb window from the SNP position on the chromosome.
+Note: That's genes that fall within +/- 1,000,000 positions using the 'pos' column in the dataset.
 
 ```{r}
 # Enter code here.
 ```
-
 
 ### Problem 2.e (8 points)
 
-Build a weighted genetic risk score that includes all SNPs with p-value $< 10^{-4}$, a score with all SNPs with p-value $< 10^{-3}$, and a score that only includes SNPs on the FTO gene (hint: ensure that the ordering of SNPs is respected). Add the three scores as columns to the gdm.dt data table. Fit the three scores in separate logistic regression models to test their association with gestational diabetes, and for each report odds ratio, 95% confidence interval and p-value.
+Build a weighted genetic risk score that includes all SNPs with p-value $< 10^{-4}$, a score with all SNPs with p-value $< 10^{-3}$, and a score that only includes SNPs on the FTO gene (hint: ensure that the ordering of SNPs is respected).
+Add the three scores as columns to the gdm.dt data table.
+Fit the three scores in separate logistic regression models to test their association with gestational diabetes, and for each report odds ratio, 95% confidence interval and p-value.
 
 ```{r}
 # Enter code here.
 ```
-
 
 ### Problem 2.f (4 points)
 
-File GDM.test.txt (available from the accompanying zip folder on Learn) contains genotypes of another 40 pregnant women with and without gestational diabetes (assume that the reference allele is the same one that was specified in file GDM.raw.txt). Read the file into variable gdm.test. For the set of patients in gdm.test, compute the three genetic risk scores as defined in problem 2.e using the same set of SNPs and corresponding weights. Add the three scores as columns to gdm.test (hint: use the same columnnames as before).
+File GDM.test.txt (available from the accompanying zip folder on Learn) contains genotypes of another 40 pregnant women with and without gestational diabetes (assume that the reference allele is the same one that was specified in file GDM.raw.txt).
+Read the file into variable gdm.test.
+For the set of patients in gdm.test, compute the three genetic risk scores as defined in problem 2.e using the same set of SNPs and corresponding weights.
+Add the three scores as columns to gdm.test (hint: use the same columnnames as before).
 
 ```{r}
 # Enter code here.
 ```
-
 
 ### Problem 2.g (4 points)
 
-Use the logistic regression models fitted in problem 2.e to predict the outcome of patients in gdm.test. Compute the test log-likelihood for the predicted probabilities from the three genetic risk score models.
+Use the logistic regression models fitted in problem 2.e to predict the outcome of patients in gdm.test.
+Compute the test log-likelihood for the predicted probabilities from the three genetic risk score models.
 
 ```{r}
 # Enter code here.
 ```
-
 
 ### Problem 2.h (4points)
 
-File GDM.study2.txt (available from the accompanying zip folder on Learn) contains the summary statistics from a different study on the same set of SNPs. Perform a meta-analysis with the results obtained in problem 2.c (hint: remember that the effect alleles should correspond) and produce a summary of the meta-analysis results for the set of SNPs with meta-analysis p-value $< 10^{-4}$ sorted by increasing p-value.
+File GDM.study2.txt (available from the accompanying zip folder on Learn) contains the summary statistics from a different study on the same set of SNPs.
+Perform a meta-analysis with the results obtained in problem 2.c (hint: remember that the effect alleles should correspond) and produce a summary of the meta-analysis results for the set of SNPs with meta-analysis p-value $< 10^{-4}$ sorted by increasing p-value.
 
 ```{r}
 # Enter code here.
 ```
 
+\newpage
 
 ## Problem 3 (33 points)
 
-File nki.csv (available from the accompanying zip folder on Learn) contains data for 144 breast cancer patients. The dataset contains a binary outcome variable (“Event”, indicating the insurgence of further complications after operation), covariates describing the tumour and the age of the patient, and gene expressions for 70 genes found to be prognostic of survival.
-
+File nki.csv (available from the accompanying zip folder on Learn) contains data for 144 breast cancer patients.
+The dataset contains a binary outcome variable ("Event", indicating the insurgence of further complications after operation), covariates describing the tumour and the age of the patient, and gene expressions for 70 genes found to be prognostic of survival.
 
 ### Problem 3.a (6 points)
 
-Compute the matrix of correlations between the gene expression variables, and display it so that a block structure is highlighted. Discuss what you observe. Write some code to identify the unique pairs of (distinct) variables that have correlation coefficient greater than 0.80 in absolute value and report their correlation coefficients.
+Compute the matrix of correlations between the gene expression variables, and display it so that a block structure is highlighted.
+Discuss what you observe.
+Write some code to identify the unique pairs of (distinct) variables that have correlation coefficient greater than 0.80 in absolute value and report their correlation coefficients.
 
 ```{r}
 # Enter code here.
@@ -307,35 +319,40 @@ nki.dt <- fread("data/nki.csv")
 numcols <- sapply(nki.dt, is.numeric) 
 cor.nki <- nki.dt[, ..numcols] %>% cor(use="pairwise.complete")
 cor.nki <- cor.nki*(abs(cor.nki)>0.8)
-cor.nki <- cor.nki[-which(rowSums(cor.nki)==1),-which(colSums(cor.nki)==1)]
+# remove rows where they only have autocorrelation present
+cor.nki <- cor.nki[-which(abs(rowSums(cor.nki))==1),-which(abs(colSums(cor.nki))==1)] 
 corrplot(cor.nki,
          order="hclust",
-         addrect=2,
-         method="square",
+         addrect=3,
          diag=FALSE,
          tl.col="black",
          tl.cex = 0.9,
          outline=TRUE,
          title="Correlation matrix",
-         cl.lim=c(-1, 1),
+         col = brewer.pal(n=11, name="PuOr"),
+         cl.lim=c(0, 1),
          mar=c(0,0,1.5,0))
 ```
 
-
 ### Problem 3.b (8 points)
 
-Run PCA (only over the columns containing gene expressions), in order to derive a patient-wise summary of all gene expressions (dimensionality reduction). Decide which components to keep and justify your decision. Test if those principal components are associated with the outcome in unadjusted logistic regression models and in models adjusted for age, estrogen receptor and grade. Justify the difference in results between unadjusted and adjusted models.
+Run PCA (only over the columns containing gene expressions), in order to derive a patient-wise summary of all gene expressions (dimensionality reduction).
+Decide which components to keep and justify your decision.
+Test if those principal components are associated with the outcome in unadjusted logistic regression models and in models adjusted for age, estrogen receptor and grade.
+Justify the difference in results between unadjusted and adjusted models.
 
 ```{r}
 # Enter code here.
 numcols[c('Event', 'Diam', 'LymphNodes', 'EstrogenReceptor', 'Grade', 'Age')] <- FALSE
 
-pca.vars <- prcomp(nki.dt[, ..numcols], center = T, scale = T)
+pca.vars <- prcomp(nki.dt[, ..numcols], center=T, scale=T)
 var.expl <- cumsum(pca.vars$sdev^2 / sum(pca.vars$sdev^2))
 
 summary(pca.vars)
 # cumulative variance explained plot
 plot(var.expl, type='l', col='blue4')
+
+# calculate first 90%, 95% variance explained automatically.  
 abline(h=0.9511847, v=42, lty=2)
 
 # scree plot
@@ -343,8 +360,9 @@ screeplot(pca.vars, main="Scree plot", col='lightblue')
 
 # PCA plot
 fviz_pca_ind(pca.vars, geom='point',
-             habillage = nki.dt$Event,
-             addEllipses = T)
+             habillage=nki.dt$Event,
+             addEllipses=T,
+             ellipse.level=0.95)
 
 # PCA biplot
 # fviz_pca_biplot(pca.vars, geom='point', repel = T)
@@ -361,32 +379,51 @@ pca.embeddings.95 <- as.data.frame(pca.vars$x[,1:42])
 # V <- as.matrix(crimeData.pca1$rotation)
 # beta.X <- V %*% beta.Z
 # beta.X
-data.embeded <- as.data.frame(cbind(nki.dt[,1],pca.embeddings.95))
+
+data.embeded     <- as.data.frame(cbind(nki.dt[,1], pca.embeddings.95))
 data.embeded.adj <- as.data.frame(cbind(nki.dt[,1], nki.dt[,4:6], pca.embeddings.95))
 
-model     <- glm(Event~., data=data.embeded, family='binomial')
+model     <- glm(Event~., data=data.embeded    , family='binomial')
 model.adj <- glm(Event~., data=data.embeded.adj, family='binomial')
 
 summary(model)
 summary(model.adj)
 ```
 
-
 ### Problem 3.c (8 points)
 
-Use plots to compare with the correlation structure observed in problem 2.a and to examine how well the dataset may explain your outcome. Discuss your findings and suggest any further steps if needed. 
+Use plots to compare with the correlation structure observed in problem 2.a and to examine how well the dataset may explain your outcome.
+Discuss your findings and suggest any further steps if needed.
 
 ```{r}
 # Enter code here.
-```
+fviz_pca_biplot(pca.vars, 
+                repel=T,
+                select.var=list(contrib=10),
+                select.ind = list(contrib=30),
+                label="var",
+                habillage = nki.dt$Event,
+                addEllipses=TRUE,
+                ellipse.level=0.90,
+                xlim=c(-9,12),
+                ylim=c(-9,7))
 
+pc1.rotations.top <- sort(pca.vars$rotation[,1], decreasing=TRUE)[1:10]
+pc2.rotations.top <- sort(pca.vars$rotation[,2], decreasing=TRUE)[1:10]
+
+pc1.rotations.top
+pc2.rotations.top
+```
 
 ### Problem 3.d (11 points)
 
-Based on the models we examined in the labs, fit an appropriate model with the aim to provide the most accurate prognosis you can for patients. Discuss and justify your decisions.
+Based on the models we examined in the labs, fit an appropriate model with the aim to provide the most accurate prognosis you can for patients.
+Discuss and justify your decisions.
 
 ```{r}
 # Enter code here.
+
+# TODO: split dataset, train models, measure accuracy, compare results.
+
+
 ```
-
-
