@@ -307,24 +307,26 @@ Note: That's genes that fall within +/- 1,000,000 positions using the 'pos' colu
 
 ```{r}
 # Enter code here.
-# longegfr1 = data.table(fread('./data/longegfr1.csv'), key=c('id', 'fu.years'))
-# longegfr2 = data.table(fread('./data/longegfr2.csv'), key=c('ID', 'fu.years'))
-# colnames(longegfr2) = c('id','fu.years','egfr') # change column names to make joining easier
-# pk = c('id','fu.years')
-# longegfr = merge(longegfr1,
-#                  longegfr2,
-#                  by=pk,
-#                  all=TRUE)[order(id,fu.years)] # FULL OUTER JOIN
-
 gdm.annot.dt <- data.table(fread('data/GDM.annot.txt'), key=c('snp'))
 pk <- c('snp')
 association[,snp:=substring(snp_full, 1, nchar(snp_full)-2)]
-association
+association[,allele:=substring(snp_full, nchar(snp_full),nchar(snp_full))]
+association<- association[,-'snp_full']
 association.ext <- merge(association,
                          gdm.annot.dt,
                          by=pk,
                          all=TRUE)[order(snp)]
 association.ext
+
+report1 <- association.ext[p.value < 1e-4, c('snp','allele','chrom','gene','pos')]
+report1[,c('snp','allele','chrom','gene')]
+
+report2 <- association.ext[p.value < 1e-4 & (pos >= report1[,pos][1] - 1000000 & pos <=report1[,pos][1] + 1000000)
+                           | (pos >= report1[,pos][2] - 1000000 & pos <=report1[,pos][2] + 1000000),
+                           c('snp','gene')]
+report2
+
+
 ```
 
 ### Problem 2.e (8 points)
