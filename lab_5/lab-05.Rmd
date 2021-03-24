@@ -4,6 +4,9 @@ subtitle: "Biomedical Data Science"
 date: "`r Sys.Date()`"
 author: "Stuart McGurnaghan, University of Edinburgh"
 output: pdf_document
+editor_options: 
+  markdown: 
+    wrap: sentence
 ---
 
 # GWAS analyses
@@ -34,10 +37,10 @@ It's also increasingly common to use linear mixed models to account for populati
 In what follows, we will perform *crude associations*, that is not adjusted for other covariates, bearing in mind that it's a simplification.
 We start by reading file `chrom21.csv` (available on Learn), which contains 1500 SNPs from chromosome 21 as well as a column with a quantitative outcome (the first column).
 
-
 ```{r}
 library(data.table)
 chrom21 <- fread("chrom21.csv")
+chrom21
 ```
 
 Also genetic data can contain missing values, due to genotyping errors or poor quality reads that are discarded at the quality control step.
@@ -126,6 +129,7 @@ plot(-log10(crude$p.value),
      ylab = "-log10(p-value)"
      )
 abline(h = -log10(5e-8), lty = 2, col = "red") # genome-wide significance threshold
+dim(crude)
 ```
 
 Note that in this particular example, we did not have genetic positions of each SNP: if we did, we should use them to better represent the spread of SNPs on the chromosome.
@@ -352,39 +356,39 @@ plot(-log10(gwas1$P.value), -log10(pval.ma),
 
 # Practical exercises
 
-##  Exercise 1. Using file `chrom21.csv` (available on Learn):
+## Exercise 1. Using file `chrom21.csv` (available on Learn):
 
-a. Impute the missing values in the SNPs.
-
-```{r}
-# insert code here
-```
-
-b. Set the random seed to 1 and create 5 cross-validation folds.
+a.  Impute the missing values in the SNPs.
 
 ```{r}
 # insert code here
 ```
 
-c. Within each training fold, perform an association study for all SNPs in the dataset (hint: store the data table of results as an element in a list) and report the most associated SNP (answer: snp970, snp969, snp969, snp969, snp969).
+b.  Set the random seed to 1 and create 5 cross-validation folds.
 
 ```{r}
 # insert code here
 ```
 
-d. Within each training fold, build a weighted genetic risk score that uses SNPs filtered at p-value \< 10\~\*, as well as a weighted genetic risk score that uses all available SNPs (hint: build the scores for all observations, also those in the test set).
+c.  Within each training fold, perform an association study for all SNPs in the dataset (hint: store the data table of results as an element in a list) and report the most associated SNP (answer: snp970, snp969, snp969, snp969, snp969).
 
 ```{r}
 # insert code here
 ```
 
-e. Within each training fold, fit a linear regression models for each score (hint: store each regression object as an element in a list).
+d.  Within each training fold, build a weighted genetic risk score that uses SNPs filtered at p-value \< 10\~\*, as well as a weighted genetic risk score that uses all available SNPs (hint: build the scores for all observations, also those in the test set).
 
 ```{r}
 # insert code here
 ```
 
-f. Use the two genetic risk scores to predict the outcome in each of the test folds and compute the correlation coefficient between the observed outcome and the predicted outcome. Report the average correlation over all folds (answer: 0.566, 0.767).
+e.  Within each training fold, fit a linear regression models for each score (hint: store each regression object as an element in a list).
+
+```{r}
+# insert code here
+```
+
+f.  Use the two genetic risk scores to predict the outcome in each of the test folds and compute the correlation coefficient between the observed outcome and the predicted outcome. Report the average correlation over all folds (answer: 0.566, 0.767).
 
 ```{r}
 # insert code here
@@ -392,31 +396,31 @@ f. Use the two genetic risk scores to predict the outcome in each of the test fo
 
 ## Exercise 2. Using file `dpt2.txt` (available on Learn):
 
-a. Sort the data table in increasing order of chromosome number and base pairs (column "pos").
+a.  Sort the data table in increasing order of chromosome number and base pairs (column "pos").
 
 ```{r}
 # insert code here
 ```
 
-b. Using function `as.numeric()`, convert the "pos" column from integer to numeric (to avoid overflow). Add column "cum.pos" to the data table to contain the cumulative sum of the positions (use function `cumsum()`), and assert that no NAs were produced.
+b.  Using function `as.numeric()`, convert the "pos" column from integer to numeric (to avoid overflow). Add column "cum.pos" to the data table to contain the cumulative sum of the positions (use function `cumsum()`), and assert that no NAs were produced.
 
 ```{r}
 # insert code here
 ```
 
-c. Create a Manhattan plot that orders the SNPs according to their cumulative position along the genome.
+c.  Create a Manhattan plot that orders the SNPs according to their cumulative position along the genome.
 
 ```{r}
 # insert code here
 ```
 
-d. Redo the plot by using alternating colours for adjacent chromosomes, and add a horizontal line corresponding to the standard genome-wide significance threshold.
+d.  Redo the plot by using alternating colours for adjacent chromosomes, and add a horizontal line corresponding to the standard genome-wide significance threshold.
 
 ```{r}
 # insert code here
 ```
 
-e. Produce a volcano plot for this set of results, using a different colour for SNPs that have minor allele frequency (MAF) \< 5%.
+e.  Produce a volcano plot for this set of results, using a different colour for SNPs that have minor allele frequency (MAF) \< 5%.
 
 ```{r}
 # insert code here
