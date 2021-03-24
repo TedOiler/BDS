@@ -290,12 +290,6 @@ results <- cbind(sns_name, sns_role, results)
 beta <- c('Intercept', 'beta1','Intercept', 'beta1')
 results <- cbind(beta, results)
 results
-# Genetic risk score
-# snps.grs <- association[p.value < t]
-# gdm.grs <- gdm.dt[, .SD, .SDcols = association[p.value < t]$snp]
-# unweighted.score <- as.matrix(gdm.grs) %*% sign(snps.grs$beta)
-# weighted.score <- as.matrix(gdm.grs) %*% snps.grs$beta
-
 ```
 
 ### Problem 2.d (4points)
@@ -311,7 +305,7 @@ gdm.annot.dt <- data.table(fread('data/GDM.annot.txt'), key=c('snp'))
 pk <- c('snp')
 association[,snp:=substring(snp_full, 1, nchar(snp_full)-2)]
 association[,allele:=substring(snp_full, nchar(snp_full),nchar(snp_full))]
-association<- association[,-'snp_full']
+# association<- association[,-'snp_full']
 association.ext <- merge(association,
                          gdm.annot.dt,
                          by=pk,
@@ -336,7 +330,56 @@ Add the three scores as columns to the gdm.dt data table.
 Fit the three scores in separate logistic regression models to test their association with gestational diabetes, and for each report odds ratio, 95% confidence interval and p-value.
 
 ```{r}
-# Enter code here.
+# Genetic risk score
+snps.grs.3   <- association.ext[p.value < 1e-3]
+snps.grs.4   <- association.ext[p.value < 1e-4]
+snps.grs.FTO <- association.ext[gene == 'FTO']
+
+gdm.grs.3   <- gdm.dt[, .SD, .SDcols = snps.grs.3$snp_full]
+gdm.grs.4   <- gdm.dt[, .SD, .SDcols = snps.grs.4$snp_full]
+gdm.grs.FTO <- gdm.dt[, .SD, .SDcols = snps.grs.FTO$snp_full]
+
+weighted.score.3   <- as.matrix(gdm.grs.3) %*% snps.grs.3$beta
+weighted.score.4   <- as.matrix(gdm.grs.4) %*% snps.grs.4$beta
+weighted.score.FTO <- as.matrix(gdm.grs.FTO) %*% snps.grs.FTO$beta
+
+gdm.dt[,weighted.risk.3:=weighted.score.3]
+gdm.dt[,weighted.risk.4:=weighted.score.4]
+gdm.dt[,weighted.risk.FTO:=weighted.score.FTO]
+gdm.dt
+
+risk.3.logistic   <- glm(gdm.dt$pheno ~ gdm.dt$weighted.risk.3, family='binomial')
+risk.4.logistic   <- glm(gdm.dt$pheno ~ gdm.dt$weighted.risk.4, family='binomial')
+risk.FTO.logistic <- glm(gdm.dt$pheno ~ gdm.dt$weighted.risk.FTO, family='binomial')
+
+report.3 <- NULL
+report.3 <- transpose(as.data.table(coef(summary(risk.3.logistic))[-1, -3]))
+report.3 <- cbind(report.3,
+                  exp(coef(risk.3.logistic))[2],
+                  exp(confint(risk.3.logistic, level=0.95)[2,1]),
+                  exp(confint(risk.3.logistic, level=0.95)[2,2]),
+                  "p.value 1e-3")
+colnames(report.3) <- c("beta","std.error", "p.value", "odds ratio", "odds ratio 2.5%", "odds ratio 97.5%", "identifier")
+report.4 <- NULL
+report.4 <- transpose(as.data.table(coef(summary(risk.4.logistic))[-1, -3]))
+report.4 <- cbind(report.4,
+                  exp(coef(risk.4.logistic))[2],
+                  exp(confint(risk.4.logistic, level=0.95)[2,1]),
+                  exp(confint(risk.4.logistic, level=0.95)[2,2]),
+                  "p.value 1e-4")
+colnames(report.4) <- c("beta","std.error", "p.value", "odds ratio", "odds ratio 2.5%", "odds ratio 97.5%", "identifier")
+report.FTO <- NULL
+report.FTO <- transpose(as.data.table(coef(summary(risk.3.logistic))[-1, -3]))
+report.FTO <- cbind(report.FTO,
+                  exp(coef(risk.FTO.logistic))[2],
+                  exp(confint(risk.FTO.logistic, level=0.95)[2,1]),
+                  exp(confint(risk.FTO.logistic, level=0.95)[2,2]),
+                  "gene FTO")
+colnames(report.FTO) <- c("beta","std.error", "p.value", "odds ratio", "odds ratio 2.5%", "odds ratio 97.5%", "identifier")
+
+report <- rbind(report.3, report.4, report.FTO) 
+report[,3:7]
+
 ```
 
 ### Problem 2.f (4 points)
