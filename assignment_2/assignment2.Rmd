@@ -442,8 +442,6 @@ Perform a meta-analysis with the results obtained in problem 2.c (hint: remember
 ```{r}
 # Enter code here.
 gdm.meta <- fread("data/GDM.study2.txt")
-gdm.meta
-association.ext
 
 gdm.meta <- gdm.meta[snp %in% association.ext$snp]
 association.ext <- association.ext[snp %in% gdm.meta$snp]
@@ -455,6 +453,42 @@ all.equal(gdm.meta$snp, association.ext$snp)
 effect <- association.ext$allele == gdm.meta$effect.allele
 other <- association.ext$allele == gdm.meta$other.allele
 table(effect, other) 
+
+# clearning data that don't match 
+gdm.meta <- gdm.meta[-which((effect+other)==0),]
+association.ext <- association.ext[-which((effect+other)==0),]
+
+# gdm.meta <- gdm.meta[order(snp, effect.allele)]
+# association.ext <- association.ext[order(snp, allele)]
+# all.equal(gdm.meta$snp, association.ext$snp)
+# 
+# effect <- association.ext$allele == gdm.meta$effect.allele
+# other <- association.ext$allele == gdm.meta$other.allele
+# table(effect, other) 
+
+beta1 <- association.ext$beta
+beta2 <- gdm.meta$beta
+
+weight.association.ext <- 1 / association.ext$std.error^2
+weight.gdm.meta<- 1 / gdm.meta$se^2
+
+head(weight.association.ext)
+head(weight.gdm.meta)
+
+
+beta.ma <- (weight.association.ext * beta1 + weight.gdm.meta * beta2) / (weight.association.ext + weight.gdm.meta) 
+se.ma <- sqrt(1 / (weight.association.ext + weight.gdm.meta))
+pval.ma <- 2 * pnorm(abs(beta.ma / se.ma), lower.tail = FALSE)
+
+cat('Meta analysis mean beta:', mean(beta.ma, na.rm=TRUE),
+    '\nMeta analysis mean sd:', mean(se.ma, na.rm=TRUE),
+    '\nMeta analysis mean p.value:', mean(pval.ma, na.rm=TRUE))
+
+plot(-log10(association.ext$p.value), -log10(pval.ma), 
+     xlab = "p-values from original study", 
+     ylab = "p-values from meta-analysis"
+     )
+abline(a=0,b=1,col="red4", lty=2)
 ```
 
 \newpage
@@ -488,7 +522,7 @@ corrplot(cor.nki_full,
          cl.lim=c(-1, 1),
          mar=c(0,0,1.5,0))
 
-cor.nki <- cor.nki_full*(abs(cor.nki)>0.8)
+cor.nki <- cor.nki_full*(abs(cor.nki_full)>0.8)
 # remove rows where they only have autocorrelation present
 cor.nki <- cor.nki[-which(abs(rowSums(cor.nki))==1),-which(abs(colSums(cor.nki))==1)] 
 

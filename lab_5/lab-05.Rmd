@@ -314,6 +314,7 @@ The effect sizes of the SNPs which we identified to have alleles flipped need to
 Here we swap the sign for the second study, but this is an arbitrary choice.
 
 ```{r}
+gwas1
 beta1 <- gwas1$Effect_A1
 beta2 <- gwas2$Effect_A1
 beta2[flipped] <- -beta2[flipped]
@@ -348,8 +349,8 @@ pval.ma <- 2 * pnorm(abs(beta.ma / se.ma), lower.tail = FALSE)
 plot(-log10(gwas1$P.value), -log10(pval.ma), 
      xlim = c(0, 8), ylim = c(0, 16), 
      xlab = "p-values from gwas1", 
-     ylab = "p-values from meta-analysis"
-     )
+     ylab = "p-values from meta-analysis")
+    
 
 ```
 
