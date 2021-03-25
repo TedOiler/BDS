@@ -21,6 +21,9 @@ library(corrplot)
 library(RColorBrewer)
 library(factoextra)
 library(ISwR)
+library(ggplot2)
+library(cowplot)
+require(gridExtra)
 ```
 
 # Assignment 2
@@ -627,8 +630,113 @@ Discuss and justify your decisions.
 
 ```{r}
 # Enter code here.
+data.full <- nki.dt
+data.full[data.full$Diam == unique(nki.dt$Diam)[1], ]$Diam <- 0 
+data.full[data.full$Diam == unique(nki.dt$Diam)[2], ]$Diam <- 1 
+data.full$Diam <- as.factor(data.full$Diam)
+data.full[data.full$LymphNodes == unique(nki.dt$LymphNodes)[1], ]$LymphNodes <- 0 
+data.full[data.full$LymphNodes == unique(nki.dt$LymphNodes)[2], ]$LymphNodes <- 1 
+data.full$LymphNodes <- as.factor(data.full$LymphNodes)
+data.full[data.full$EstrogenReceptor == unique(nki.dt$EstrogenReceptor)[1], ]$EstrogenReceptor <- 0 
+data.full[data.full$EstrogenReceptor == unique(nki.dt$EstrogenReceptor)[2], ]$EstrogenReceptor <- 1 
+data.full$EstrogenReceptor <- as.factor(data.full$EstrogenReceptor)
+data.full[data.full$Grade == unique(nki.dt$Grade)[1], ]$Grade <- 0 
+data.full[data.full$Grade == unique(nki.dt$Grade)[2], ]$Grade <- 1 
+data.full[data.full$Grade == unique(nki.dt$Grade)[3], ]$Grade <- 2 
+data.full$Grade <- as.factor(data.full$Grade)
 
-# TODO: split dataset, train models, measure accuracy, compare results.
+ind <- createDataPartition(data.full$Event, p=0.85, list=FALSE)
+data.train <- data.full[ind,]
+data.test <- data.full[-ind,]
 
+X.train <- data.train[, !c("Event"), with=FALSE]
+X.test  <- data.test [, !c("Event"), with=FALSE]
+y.train <- data.train[,  c("Event"), with=FALSE]
+y.test  <- data.test [,  c("Event"), with=FALSE]
+
+pca.vars.full <- prcomp(data.full[, ..numcols], center=T, scale=T)
+pca.embeddings.95.train <- as.data.frame(pca.vars.full$x[ind,1:42])
+pca.embeddings.95.test <- as.data.frame(pca.vars.full$x[-ind,1:42])
+pca.embeddings.adj.train <- as.data.frame(cbind(data.train[,1], data.train[,4:6], pca.embeddings.95.train))
+pca.embeddings.adj.test <- as.data.frame(cbind(data.test[,1], data.test[,4:6], pca.embeddings.95.test))
+data.embeded.train     <- as.data.frame(cbind(data.train[,1], pca.embeddings.95.train))
+data.embeded.adj.train <- as.data.frame(cbind(data.train[,1:6], pca.embeddings.95.train))
+data.embeded.test     <- as.data.frame(cbind(data.test[,1], pca.embeddings.95.test))
+data.embeded.adj.test <- as.data.frame(cbind(data.test[,1:6], pca.embeddings.95.test))
+
+
+logistic.simple  <- glm(Event~Diam + LymphNodes + EstrogenReceptor + Grade + Age,data=data.train, family='binomial')
+logistic.full    <- glm(Event~., data=data.train, family='binomial')
+logistic.pca     <- glm(Event~., data=data.embeded.train, family='binomial')
+logistic.pca.adj <- glm(Event~., data=data.embeded.adj.train, family='binomial')
+
+# https://github.com/StatQuest/logistic_regression_demo/blob/master/logistic_regression_demo.R
+#TODO: make it a function
+predicted.data <- data.frame(
+  probability.of.event=logistic.simple$fitted.values,
+  event=data.train$Event)
+predicted.data <- predicted.data[
+  order(predicted.data$probability.of.event, decreasing=FALSE),]
+predicted.data$rank <- 1:nrow(predicted.data)
+p1 <- ggplot(data=predicted.data, aes(x=rank, y=probability.of.event)) +
+  geom_point(aes(color=event), alpha=1, shape=4, stroke=2) +
+  xlab("Index") +
+  ylab("Predicted probability of Event") +
+  ggtitle('Model logistic.simple')
+
+predicted.data <- data.frame(
+  probability.of.event=logistic.pca$fitted.values,
+  event=data.train$Event)
+predicted.data <- predicted.data[
+  order(predicted.data$probability.of.event, decreasing=FALSE),]
+predicted.data$rank <- 1:nrow(predicted.data)
+p2 <- ggplot(data=predicted.data, aes(x=rank, y=probability.of.event)) +
+  geom_point(aes(color=event), alpha=1, shape=4, stroke=2) +
+  xlab("Index") +
+  ylab("Predicted probability of Event") +
+  ggtitle('Model logistic.pca')
+
+predicted.data <- data.frame(
+  probability.of.event=logistic.full$fitted.values,
+  event=data.train$Event)
+predicted.data <- predicted.data[
+  order(predicted.data$probability.of.event, decreasing=FALSE),]
+predicted.data$rank <- 1:nrow(predicted.data)
+p3 <- ggplot(data=predicted.data, aes(x=rank, y=probability.of.event)) +
+  geom_point(aes(color=event), alpha=1, shape=4, stroke=2) +
+  xlab("Index") +
+  ylab("Predicted probability of Event") +
+  ggtitle('Model logistic.full')
+
+predicted.data <- data.frame(
+  probability.of.event=logistic.pca.adj$fitted.values,
+  event=data.train$Event)
+predicted.data <- predicted.data[
+  order(predicted.data$probability.of.event, decreasing=FALSE),]
+predicted.data$rank <- 1:nrow(predicted.data)
+p4 <- ggplot(data=predicted.data, aes(x=rank, y=probability.of.event)) +
+  geom_point(aes(color=event), alpha=1, shape=4, stroke=2) +
+  xlab("Index") +
+  ylab("Predicted probability of Event") +
+  ggtitle('Model logistic.pca.adj')
+
+grid.arrange(p1, p2, p3, p4, ncol=2, nrow=2)
+
+
+pred.logistic.simple  <- predict(logistic.simple , newdata=data.test, type='response')
+pred.logistic.full    <- predict(logistic.full   , newdata=data.test, type='response')
+pred.logistic.pca     <- predict(logistic.pca    , newdata=data.embeded.test, type='response')
+pred.logistic.pca.adj <- predict(logistic.pca.adj, newdata=data.embeded.adj.test, type='response')
+
+log.loss.logistic.simple  <- sum(log(1+exp(- data.test$Event %*% pred.logistic.simple)))
+log.loss.logistic.full    <- sum(log(1+exp(- data.test$Event %*% pred.logistic.full)))
+log.loss.logistic.pca     <- sum(log(1+exp(- data.test$Event %*% pred.logistic.pca)))
+log.loss.logistic.pca.adj <- sum(log(1+exp(- data.test$Event %*% pred.logistic.pca.adj)))
+
+names    <- c("logistic.simple", "logistic.full", "logistic.pca", "logistic.pca.adj")
+log.loss <- c(log.loss.logistic.simple, log.loss.logistic.full, log.loss.logistic.pca, log.loss.logistic.pca.adj)
+
+final.results <- cbind(names, signif(log.loss,6))
+final.results
 
 ```
