@@ -78,7 +78,7 @@ par(mfrow=c(1,2), mar=c(4,4,5,2))
 plot(fit.cv.lasso, main="Lasso")
 plot(fit.cv.ridge, main="Ridge")
 ```
-
+ 
 ### Problem 1.b (2 points)
 
 Create a data table that for each value of 'lambda.min' and 'lambda.1se' for each model fitted in problem 1.a reports: \* the corresponding AUC, \* the corresponding model size.
@@ -116,6 +116,9 @@ setnames(results.train, cols)
 results.train
 ```
 
+The results show as expected that for stricter lasso models (models with bigger $\lambda$ parameters), a lot of coefficients quickly go to zero. On the other hand, this is not observed on the ridge regression models, where the number of variables with non-zero coefficients is not affected by the hyper-parameter. Secondly, we see that the auc scores are similar when checking accross models and when checkings accros lambda.min and lambda.1se, so these models are very similar for in-sample goodness of fit tests.
+
+
 ### Problem 1.c (7 points)
 
 Perform both backward (we'll later refer to this as model B) and forward (model S) stepwise selection on the same training set derived in problem 1.a.
@@ -132,6 +135,8 @@ modelB
 modelS
 ```
 
+From the above results, it is clear that the backwards model, modelB is better due to it's lower AIC score. We also see that while the forward model (modelS), has two parameters more than modelB, the coefficients of the parameters that exist in both models simultaneously, have the same sign (which is important because it means that they have the same interpretation) and are also very similar in value as well. 
+
 ### Problem 1.d (3 points)
 
 Compare the goodness of fit of model B and model S in an appropriate way.
@@ -142,6 +147,8 @@ Compare the goodness of fit of model B and model S in an appropriate way.
 signif(pchisq(modelB$null.deviance - modelB$deviance, df=12, lower.tail=FALSE),2)
 signif(pchisq(modelS$null.deviance - modelS$deviance, df=14, lower.tail=FALSE),2)
 ```
+
+The goodness of of fit has been testes with the Chi-square goodness of fit tests and deviance, which test the hypothesis $H_0$: the model is exaclty correct vs $H_1$: model is not exactly correct. As we see, the p-values are way below the $5\%$ threshold, which means that there is no evidence to reject $H_0$. 
 
 ### Problem 1.e (2 points)
 
@@ -154,6 +161,7 @@ auc.modelS <- roc(data.train$diagnosis, modelS$fitted.values)
 auc.modelB$auc
 auc.modelS$auc
 ```
+The areas under the curve are extremely similar for both models. This is what we expected looking at how similar the models are in variables selected, and from the chi-squared goodness of fit test.
 
 ### Problem 1.f (6 points)
 
@@ -185,6 +193,8 @@ setnames(results.final, cols)
 results.final[order(-AUC.test),]
 ```
 
+Finally, the two models, can be seen to be very similar. The AUC both in the train and the test sets only vary by a few datapoints and it is not very easy to attribute these extra few percentages to something more than luck at this point. Potentially in the future, we could try cross validating the results to make them more robust. All in all, looking at the best AUC.test column, we would pick the lasso model by a very small margin from modelB.
+
 \newpage
 
 ## Problem 2 (40 points)
@@ -215,6 +225,8 @@ gdm.dt <- fread("data/GDM.raw.txt")
 numcols <- colnames(gdm.dt)
 gdm.dt %>% .[, (numcols) := lapply(.SD, impute.to.median), .SDcols = numcols]
 ```
+
+Note: The function used to impute the data is a simplified version of the same function we wrote for assignment_1.
 
 ### Problem 2.b (8 points)
 
@@ -295,6 +307,11 @@ results <- cbind(beta, results)
 results
 ```
 
+
+Definitions of rist and protective:
+
+- 1. risk: From the results of the association study, for p-values under a threshold (0.05) the SNP that is most strongly associated to increased risk is the one with the highest beta. This also translate to highest odds ratio since the exponential is a strictly increasing funciton.
+
 ### Problem 2.d (4points)
   
 Merge your GWAS results with the table of gene names provided in file GDM.annot.txt (available from the accompanying zip folder on Learn).
@@ -313,7 +330,6 @@ association.ext <- merge(association,
                          gdm.annot.dt,
                          by=pk,
                          all=TRUE)[order(snp)]
-association.ext
 
 report1 <- association.ext[p.value < 1e-4, c('snp','allele','chrom','gene','pos')]
 report1[,c('snp','allele','chrom','gene')]
@@ -421,6 +437,8 @@ gdm.test[,weighted.risk.FTO:=weighted.score.FTO]
 
 ```
 
+Note: After performing the task, the vectors weighted.risk.3 and weighted.risk.4 are completely empty. This doesn't seem correct but more time is needed in order to debug this. However, it is useful to know that this is flagged.
+
 ### Problem 2.g (4 points)
 
 Use the logistic regression models fitted in problem 2.e to predict the outcome of patients in gdm.test.
@@ -432,9 +450,9 @@ pred.3   <- predict(risk.3.logistic  , newdata=gdm.test, type='response')
 pred.4   <- predict(risk.4.logistic  , newdata=gdm.test, type='response')
 pred.FTO <- predict(risk.FTO.logistic, newdata=gdm.test, type='response')
 
-pred.3
-pred.4
-pred.FTO
+cat('The test log-likelihood for the model p.value < 1e-3 is:', -sum(log(pred.3), na.rm=TRUE))
+cat('\nThe test log-likelihood for the model p.value < 1e-4 is:', -sum(log(pred.4), na.rm=TRUE))
+cat('\nThe test log-likelihood for the model gene=FTO is:',-sum(log(pred.FTO), na.rm=TRUE))
 ```
 
 ### Problem 2.h (4points)
@@ -494,12 +512,14 @@ plot(-log10(association.ext$p.value), -log10(pval.ma),
 abline(a=0,b=1,col="red4", lty=2)
 ```
 
+After clearing away the data that didn't exist in both association studies, the results where pretty clear. As it is shown in the diagram, mode p.values fall exactly on the 45 degrees line, meaning that the p.value of the original study are very close to the p.values of the meta-analysis. There are a few outliers that indicate that the correct relationship to connect the two p.values is a polynomial of second degree, but they are very few compared to the rest of the sample. Also very importantly, they are in the far right tail of the sample, where it is usual to see an outlier. All in all, the results of the two analyses seem to be very close both in their findings and on their statistical significance of these findings.
+
 \newpage
 
 ## Problem 3 (33 points)
 
 File nki.csv (available from the accompanying zip folder on Learn) contains data for 144 breast cancer patients.
-The dataset contains a binary outcome variable ("Event", indicating the insurgence of further complications after operation), covariates describing the tumour and the age of the patient, and gene expressions for 70 genes found to be prognostic of survival.
+The dataset contains a binary outcome variable ("Event", indicating the insurgence of further complications after operation), covariates descrinbing the tumour and the age of the patient, and gene expressions for 70 genes found to be prognostic of survival.
 
 ### Problem 3.a (6 points)
 
@@ -516,6 +536,7 @@ cor.nki_full <- nki.dt[, ..numcols] %>% cor(use="pairwise.complete")
 corrplot(cor.nki_full,
          order="hclust",
          addrect=6,
+         method='square',
          diag=FALSE,
          tl.pos='n',
          tl.col="black",
@@ -532,6 +553,7 @@ cor.nki <- cor.nki[-which(abs(rowSums(cor.nki))==1),-which(abs(colSums(cor.nki))
 corrplot(cor.nki,
          order="hclust",
          addrect=3,
+         method='number',
          diag=FALSE,
          tl.col="black",
          tl.cex = 0.9,
@@ -541,6 +563,8 @@ corrplot(cor.nki,
          cl.lim=c(0, 1),
          mar=c(0,0,1.5,0))
 ```
+
+In the first correlation plot, we can see that there are a lot of week positive and negative correlations. In the version of the diagram where clustering is enables, we could say that if we break down the matrix into four quarters, the second quarter is saturated with all the big absolute values of correlation, while all the other quarters, are almost all zero. When we force the correlation to be bigger than 0.8, we can observe only the very few but strong correlations on the genes of the second diagram.  
 
 ### Problem 3.b (8 points)
 
@@ -594,9 +618,14 @@ data.embeded.adj <- as.data.frame(cbind(nki.dt[,1], nki.dt[,4:6], pca.embeddings
 model     <- glm(Event~., data=data.embeded    , family='binomial')
 model.adj <- glm(Event~., data=data.embeded.adj, family='binomial')
 
-summary(model)
-summary(model.adj)
+model
+model.adj
 ```
+
+Various diagrmas have been produced in order to help us understand how many principal components are needed. The application for which this is analysis is taking place is a very sensitive one. It is of great urgency to make sure that the final model balances sensitivity and specificity. For that reason we decided to be conservative in our choices. More specifically, we can observe from the scree plot that the variance explained per component very quickly diminishes, but this plot doesn't paint the full picture. Shifting our attention to the 'Individual-PCA' plot, we see that there are too few datapoints available in order to reduce their dimension to two components and still explain the high dimensional dataset. We can see that since the two ellipsis have more overlap than not. So a few principal components won't be helpful for the task. This is the reason, the cumulative variance explained plot was created. This plot shows the total variance explained per component. The dotted lines represent the 95% variance explained threshold, which comes on the fourty-second principal component. This is the final number of principal components chosen. 
+
+With this we can extract the embedding, attach the target variable and build our models. 
+Two models were built, one containing only the embedded dataset produced by the PCA analysis and one with all the extra features such as age, etc. The two models are pretty similar in their in sample goodness-of-fit measures of AIC. They coefficient for the principal components are pretty similar between models as well.
 
 ### Problem 3.c (8 points)
 
@@ -623,6 +652,8 @@ pc1.rotations.top
 pc2.rotations.top
 ```
 
+A PCA-Biplot is produced to explore the replation between PCA and the correlation matrix produced. The vectors shown are the genes, and the angles between them show their correlations between them. So we see that these ten vectors, which also exist in the small correlation plot shown above. Since all of them are pointed to the right, they are all closely correlated, since they are closer to PC1 than PC2. 
+
 ### Problem 3.d (11 points)
 
 Based on the models we examined in the labs, fit an appropriate model with the aim to provide the most accurate prognosis you can for patients.
@@ -630,6 +661,7 @@ Discuss and justify your decisions.
 
 ```{r}
 # Enter code here.
+set.seed(2)
 data.full <- nki.dt
 data.full[data.full$Diam == unique(nki.dt$Diam)[1], ]$Diam <- 0 
 data.full[data.full$Diam == unique(nki.dt$Diam)[2], ]$Diam <- 1 
@@ -736,7 +768,19 @@ log.loss.logistic.pca.adj <- sum(log(1+exp(- data.test$Event %*% pred.logistic.p
 names    <- c("logistic.simple", "logistic.full", "logistic.pca", "logistic.pca.adj")
 log.loss <- c(log.loss.logistic.simple, log.loss.logistic.full, log.loss.logistic.pca, log.loss.logistic.pca.adj)
 
-final.results <- cbind(names, signif(log.loss,6))
+final.results <- as.data.frame(cbind(names, round(log.loss,6)))
+colnames(final.results) <- c('model name', 'log-loss')
 final.results
 
 ```
+
+
+Four models have been built in order to predict the outcome from the dataset. The models are a simple logistic regression, where no gene is used to predict. This was very simple and its purpose it to be the benchmark according to which all other models will compare. Second a logistic regression with all the variables was fit. This could work, because as we have seen, even though there are a lot of features, they correlation between features is not very strong for the majority of them. Lastly, two pca models where created, one with just the first 42 PCs as in the previous question, and one adjusted for all the other variables. 
+
+The dataset was split (with and 85-15 split since the dataset was quite small) into two sections, one for training and one for testin / evaluation out of sample of the models. Also, the variables 'Diam', 'LymphoNodes' and 'EstrogenReceptor' where converted to factors in order to test be able to used them in the models.
+
+In the plots produced, we can see that the first row of models doesn't do a very good job at assigning the probabilities, since we see that there are light blue points (which represent target=1), with very low probability and vice verse. In contrast, the second row of models, is very confident in their probabilities assigned. The second row represents the models where both demographic characteristic per patient in combination with their genes, are used to predict, while in the models of the first row, either demographic or genes where used to predict. Therefore the main output of this diagram is that when trying to predict whether a patient has cancer or not, we need information for the patient from various fields. 
+
+Finally, a table of log-losses calculated on the held out test set is presented. However, before the final results, it is very important to note that the results are extremely volatile and dependent on the random seed due to the very small size of the dataset.
+
+The best model according to the log-loss score is either the logistic.pca	or logistic.pca.adj model. A final observation is the following. While the full logistic regression is also close (and in some random seeds might even have slightly lower log-loss), the benefit of using pca is that the similarly low log-loss scores can be achieved with less than half of the dimensions of the full logistic regression, which saves on time when training the model.
