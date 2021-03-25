@@ -255,6 +255,7 @@ Given that the `weighted.score` is outside of the `chrom21` dataset, the easiest
 
 ```{r}
 pred <- predict(model.score, newdata=chrom21)[-train.idx]
+dim(chrom21)
 ```
 
 As a measure of performance we can compute the correlation coefficient between predicted and observed outcome (restricted to samples in the test set), or the square of that (corresponding to the $R^2$).

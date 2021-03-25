@@ -319,8 +319,6 @@ report2 <- association.ext[p.value < 1e-4 & (pos >= report1[,pos][1] - 1000000 &
                            | (pos >= report1[,pos][2] - 1000000 & pos <=report1[,pos][2] + 1000000),
                            c('snp','gene')]
 report2
-
-
 ```
 
 ### Problem 2.e (8 points)
@@ -445,6 +443,18 @@ Perform a meta-analysis with the results obtained in problem 2.c (hint: remember
 # Enter code here.
 gdm.meta <- fread("data/GDM.study2.txt")
 gdm.meta
+association.ext
+
+gdm.meta <- gdm.meta[snp %in% association.ext$snp]
+association.ext <- association.ext[snp %in% gdm.meta$snp]
+
+gdm.meta <- gdm.meta[order(snp, effect.allele)]
+association.ext <- association.ext[order(snp, allele)]
+all.equal(gdm.meta$snp, association.ext$snp)
+
+effect <- association.ext$allele == gdm.meta$effect.allele
+other <- association.ext$allele == gdm.meta$other.allele
+table(effect, other) 
 ```
 
 \newpage
@@ -464,10 +474,24 @@ Write some code to identify the unique pairs of (distinct) variables that have c
 # Enter code here.
 nki.dt <- fread("data/nki.csv")
 numcols <- sapply(nki.dt, is.numeric) 
-cor.nki <- nki.dt[, ..numcols] %>% cor(use="pairwise.complete")
-cor.nki <- cor.nki*(abs(cor.nki)>0.8)
+cor.nki_full <- nki.dt[, ..numcols] %>% cor(use="pairwise.complete")
+
+corrplot(cor.nki_full,
+         order="hclust",
+         addrect=6,
+         diag=FALSE,
+         tl.pos='n',
+         tl.col="black",
+         tl.cex = 0.9,
+         outline=TRUE,
+         title="Correlation matrix",
+         cl.lim=c(-1, 1),
+         mar=c(0,0,1.5,0))
+
+cor.nki <- cor.nki_full*(abs(cor.nki)>0.8)
 # remove rows where they only have autocorrelation present
 cor.nki <- cor.nki[-which(abs(rowSums(cor.nki))==1),-which(abs(colSums(cor.nki))==1)] 
+
 corrplot(cor.nki,
          order="hclust",
          addrect=3,
